@@ -50,6 +50,7 @@ def clean_lawschool(num_sens):
     # sensitive variables are just racial distributions in the population and police force as well as foreign status
     # median income and pct of illegal immigrants / related variables are not labeled sensitive
     sens_features = range(8, 17)
-    x_prime = df.iloc[:, sens_features[0:num_sens]]
+    #x_prime = df.iloc[:, sens_features[0:num_sens]]
+    x_prime = df.iloc[:,:]
     return df, x_prime, y
 
