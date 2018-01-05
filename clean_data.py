@@ -30,7 +30,7 @@ def clean_communities(num_sens):
     X_prime = df_sens
     return X, X_prime, y
 
-# num_sens in 1:9
+# num_sens in 1:17
 def clean_lawschool(num_sens):
     # Data Cleaning and Import
     df = pd.read_csv('lawschool.csv')
@@ -49,8 +49,7 @@ def clean_lawschool(num_sens):
     df = df.drop('race', 1)
     # sensitive variables are just racial distributions in the population and police force as well as foreign status
     # median income and pct of illegal immigrants / related variables are not labeled sensitive
-    sens_features = range(8, 17)
-    #x_prime = df.iloc[:, sens_features[0:num_sens]]
-    x_prime = df.iloc[:,:]
+    sens_features = range(df.shape[1])
+    x_prime = df.iloc[:, sens_features[0:num_sens]]
     return df, x_prime, y
 
