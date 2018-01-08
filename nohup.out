@@ -1,0 +1,12 @@
+/Users/sethneel/Library/Python/2.7/lib/python/site-packages/scipy/linalg/basic.py:1018: RuntimeWarning: internal gelsd driver lwork query error, required iwork dimension not returned. This is likely the result of LAPACK bug 0038, fixed in LAPACK 3.2.2 (released July 21, 2010). Falling back to 'gelss' driver.
+  warnings.warn(mesg, RuntimeWarning)
+Invoked Parameters: C = 6.0, number of sensitive attributes = 18, random seed = 1,dataset = communities, learning oracle = reg_oracle
+iteration: 1
+most accurate classifier accuracy: 0.119859578736, most acc-class unfairness: 0.119636918716, most acc-class size 0.509027081244
+XX av error time 1, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group: 0.119860 0.119637 0.509027 0.741318 0.000000 0.119860 1015.000000
+('YYY coefficients of g_t: [ 0.67616993  0.28376159 -0.10743001  0.06050664  0.01808502  0.03120167\n -0.03615314 -0.00296102 -0.01698465 -0.93987961 -0.09904804 -0.0615416\n -0.0610206   0.04249467  0.7130364   0.9423623  -0.01456622 -1.20770372]',)
+('Unfairness in marginal subgroups: [0.19277859724076102, 0.0024235925720559812, 0.12426089070752741, 0.044566704953689001, 0.035839237608171287, 0.02717396580682116, 0.025519238313209663, 0.032609293430720554, 0.037329846770448934, 0.19180558551340915, 0.11275945121004288, 0.12209544058587291, 0.010881905692444245, 0.071479194087273462, 0.11648140549815361, 0.1296393002349957, 0.091770237333840377, 0.13147528554711321]',)
+Traceback (most recent call last):
+  File "Reg_Oracle_Fict.py", line 331, in <module>
+    w = update_weights(w, A, f[0], X_prime, y, B, K, iteration)
+NameError: name 'K' is not defined

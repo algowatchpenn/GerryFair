@@ -197,7 +197,7 @@ def gen_sample(A):
     return [np.random.binomial(1, A[length], 1) for length in range(len(A))]
 
 # update weights w to calculate the new p in the next iteration
-def update_weights(w, A, group, X_prime, y, B, K, iteration):
+def update_weights(w, group, X_prime, y, B, iteration):
     f_g = group
     # get group assignments for most recent group
     group_train = f_g.predict(X_prime)
@@ -205,7 +205,7 @@ def update_weights(w, A, group, X_prime, y, B, K, iteration):
     n_0 = sum([1 for t in y if t == 0])
     n_g = sum([1 for i, t in enumerate(y) if t == 0 and group_train[i] == 1])
     C_s = B * np.sign(f[2] - FP)
-    #print('C_t: {}'.format(C_s))
+
     # handle case when n_g = 0
     if n_g == 0:
         print('degenerate subgroup found')
@@ -219,10 +219,8 @@ def update_weights(w, A, group, X_prime, y, B, K, iteration):
     w = np.multiply(w, psi)
     weights = [0, (1.0 / iteration) * C_s *
                (w_g - 1.0 / n_0), (-1.0 / iteration) * C_s * (1.0 / n_0)]
-    #print(weights)
+
     # compute data point weights
-    # use A_samp, alternatively could average updates over draws A_samp ~ A
-    # get probabilistic decisions on X by empirical mixed strategy up to t-1
     for i in range(n):
         x_i = X_prime.iloc[i, :].values.reshape(1, -1)
         if y[i] == 1:
@@ -314,11 +312,7 @@ while iteration < max_iters:
     p.append(p_t)
     fp_diff_t.append(np.abs(f[1]))
     errors_t.append(err)
-    if aud_orc == 'log':
-        coef_t.append(f[0].coef_)
-    if aud_orc == 'reg_oracle':
-        coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
-
+    coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
     group_train = f[0].predict(X_prime)
     size_t.append(np.mean(group_train))
     if iteration == 1:
@@ -328,17 +322,11 @@ while iteration < max_iters:
     # print
     if printflag:
         print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_train)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(lagrange),'{:f}'.format(cum_group_mems[-1])))
-        if aud_orc == 'log':
-            tr = f[0].coef_[0]
-            tr = [yt for yt in tr]
-            t_str = str(tr).replace('\n', '')
-            print('YYY coefficients of g_t: {}'.format(t_str),)
-        if aud_orc == 'reg_oracle':
-            group_coef = f[0].b0.coef_ - f[0].b1.coef_
-            print('YYY coefficients of g_t: {}'.format(group_coef),)
+        group_coef = f[0].b0.coef_ - f[0].b1.coef_
+        print('YYY coefficients of g_t: {}'.format(group_coef),)
         print('Unfairness in marginal subgroups: {}'.format(unfairness),)
     # update weights
-    w = update_weights(w, A, f[0], X_prime, y, B, K, iteration)
+    w = update_weights(w, f[0], X_prime, y, B, iteration)
     sys.stdout.flush()
     iteration += 1
 
