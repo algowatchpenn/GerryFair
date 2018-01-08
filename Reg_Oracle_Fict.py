@@ -1,4 +1,4 @@
-# take CL arguments B, alpha, printflag, K, plotflag, dataset
+# take CL arguments B, alpha, printflag, dataset
 # B: max dual norm
 # alpha: disparity tolerance
 # printflag: bool determines whether things are printed at each iteration
@@ -10,17 +10,16 @@
 
 import sys
 # get command line arguments
-B, num_sens, printflag, K, plotflag, dataset, oracle, aud_oracle, max_iters = sys.argv[1:]
+B, num_sens, printflag, dataset, oracle, max_iters, beta = sys.argv[1:]
 num_sens = int(num_sens)
 printflag = sys.argv[3].lower() == 'true'
 B = float(B)
-plotflag = sys.argv[5].lower() == 'true'
-K = int(K)
 dataset = str(dataset)
 oracle = str(oracle)
-aud_orc = str(aud_oracle)
 max_iters = int(max_iters)
-#B, num_sens, printflag, K, plotflag, dataset, oracle, aud_orc, max_iters = 6,18,True,2,False,'communities','reg_oracle','reg_oracle',100
+beta = float(beta)
+
+#B, num_sens, printflag, dataset, oracle, max_iters, beta = 6,18,'True','communities','reg_oracle',100,.01
 import clean_data
 import numpy as np
 import pandas as pd
@@ -35,14 +34,11 @@ random.seed(1)
 
 # print out the invoked parameters
 print(
-    'Invoked Parameters: C = {}, number of sensitive attributes = {}, K = {}, random seed = 1, '
-    'plots = {}, data set = {}, learning oracle = {}, auditing oracle = {}'.format(
+    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1,dataset = {}, learning oracle = {}'.format(
         B,
         num_sens,
-        K,
-        plotflag,
         dataset,
-        oracle, aud_orc))
+        oracle))
 
 
 # Data Cleaning and Import
@@ -94,113 +90,47 @@ def gen_a(q, x, y, A, iter):
     error = np.mean([np.abs(ds[k]-y[k]) for k in range(len(y))])
     return [error, ds]
 
-# given an algorithms decisions A, sensitive variables X_sense, and true y values y_g
+
+# given an algorithms decisions empirical history of decisions A, sensitive variables X_sense, and true y values y_g
 # returns the best classifier learning A via X_sense on the set y_g = 0
 # K: number of draws from p where we take the subgroup with largest
 # discrimination
-def get_group(A, p, X, X_sens, y_g, K, aud_orc, FP):
+def get_group(A, p, X, X_sens, y_g, FP, beta):
 
-    funcs = []
-    fp_rates = []
-    fp_disp = []
-    errs = []
+    A_0 = [a for u,a in enumerate(A) if y_g[u] == 0]
+    X_0 = pd.DataFrame([X_sens.iloc[u, :] for u, s in enumerate(y_g) if s == 0])
+    m = len(A_0)
+    cost_0 = [0]*m
+    cost_1 = -1/m*((FP-beta)-A_0)
+    reg0 = linear_model.LinearRegression()
+    reg0.fit(X_0, cost_0)
+    reg1 = linear_model.LinearRegression()
+    reg1.fit(X_0, cost_1)
+    func = Reg_Oracle_Class.RegOracle(reg0, reg1)
+    group_members_0 = func.predict(X_0)
+    err_group = np.mean([np.abs(group_members_0[i]-A_0[i]) for i in range(len(A_0))])
+    # get the false positive rate in group
+    fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
+    fp_disp_rate = np.abs(fp_group_rate - FP)
 
-    # regression oracle case
-    if aud_orc == 'reg_oracle':
-        A_0 = [a for u,a in enumerate(A) if y_g[u] == 0]
-        X_0 = pd.DataFrame([X_sens.iloc[u, :] for u, s in enumerate(y_g) if s == 0])
-        cost_0 = A_0[:]
-        cost_1 = [1-t for t in A_0]
-        reg0 = linear_model.LinearRegression()
-        reg0.fit(X_0, cost_0)
-        reg1 = linear_model.LinearRegression()
-        reg1.fit(X_0, cost_1)
-        func = Reg_Oracle_Class.RegOracle(reg0, reg1)
-        group_members_0 = func.predict(X_0)
-        err_group = np.mean([np.abs(group_members_0[i]-A_0[i]) for i in range(len(A_0))])
-        # get the false positive rate in group
-        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
-        fp_disp_rate = np.abs(fp_group_rate - FP)
+    # negation
+    cost_0_neg = [0] * m
+    cost_1_neg = -1/m * (A_0-(FP + beta))
+    reg0_neg = linear_model.LinearRegression()
+    reg0_neg.fit(X_0, cost_0_neg)
+    reg1_neg = linear_model.LinearRegression()
+    reg1_neg.fit(X_0, cost_1_neg)
+    func_neg = Reg_Oracle_Class.RegOracle(reg0, reg1)
+    group_members_0_neg = func_neg.predict(X_0)
+    err_group_neg = np.mean([np.abs(group_members_0_neg[i]-A_0[i]) for i in range(len(A_0))])
+    fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+    fp_disp_rate_neg = np.abs(fp_group_rate_neg - FP)
 
-        # negation
-        func_neg = Reg_Oracle_Class.RegOracle(reg1, reg0)
-        group_members_0_neg = func_neg.predict(X_0)
-        err_group_neg = np.mean([np.abs(group_members_0_neg[i]-A_0[i]) for i in range(len(A_0))])
-        fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
-        fp_disp_rate_neg = np.abs(fp_group_rate_neg - FP)
-        if fp_disp_rate_neg > fp_disp_rate:
-            return [func_neg, fp_disp_rate_neg, fp_group_rate_neg, err_group_neg]
-        else:
-            return [func, fp_disp_rate, fp_group_rate, err_group]
-
-    # K = 0: blown up data set
-    if K == 0:
-        blowup_A = p[0].predict(X)
-        y_blowup = y_g[:]
-        blowup_ds = X_sens.iloc[:, :]
-        for classifier in p[1:]:
-            blowup_A += classifier.predict(X)
-            y_blowup += y_g
-            blowup_ds = pd.concat([blowup_ds, X_sens])
-
-        clf1 = linear_model.LogisticRegression()
-        # discard points where y = 1
-        A_0 = [blowup_A[u] for u,s in enumerate(y_blowup) if s == 0]
-        X_0 = pd.DataFrame([blowup_ds.iloc[u,:] for u,s in enumerate(y_blowup) if s == 0])
-        func = clf1.fit(X_0, pd.DataFrame(A_0).values.ravel())
-        # compute the false positive rates in the group
-        group_members_0 = func.predict(X_0)
-        err = np.mean([group_members_0[i] != A_0[i] for i in range(len(A_0))])
-        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
-        fp_disp_rate = np.abs(fp_group_rate - FP)
-
-        # negation
-        # compute the false positive rate in the group found
-        fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
-        fp_disp_rate_neg = np.abs(fp_group_rate_neg - FP)
-        A_0_neg = [1-a for a in A_0]
-        clf2 = linear_model.LogisticRegression()
-        func_neg = clf2.fit(X_0,pd.DataFrame(A_0_neg).values.ravel())
-        group_members_0_neg = func_neg.predict(X_0)
-        err_neg = np.mean([group_members_0_neg[i] != A_0_neg[i] for i in range(len(A_0_neg))])
-        if fp_disp_rate_neg > fp_disp_rate:
-            return [func_neg, fp_disp_rate_neg, fp_group_rate_neg, err_neg]
-        else:
-            return [func, fp_disp_rate, fp_group_rate, err]
-    # K > 0: sampling approach
-
+    # return group
+    if fp_disp_rate_neg > fp_disp_rate:
+        return [func_neg, fp_disp_rate_neg, fp_group_rate_neg, err_group_neg]
     else:
-        for i in range(K):
-            # draw a sample dataset
-            A_sample = [np.random.binomial(1, a, 1) for a in A]
-            A_Y1 = [A_sample[k] for k, r in enumerate(y_g) if r == 0]
-            X_Y1 = [X_sens.iloc[k, :] for k, r in enumerate(y_g) if r == 0]
-            clf1 = linear_model.LogisticRegression()
-            func = clf1.fit(X_Y1, pd.DataFrame(A_Y1).values.ravel())
-            group_members_0 = func.predict(X_Y1)
-            err_g = np.mean([np.abs(group_members_0[i] - A_Y1[i]) for i in range(len(A_Y1))])
-            errs.append(err_g)
-           # compute the false positive rates in the group
-            fp_group_rate = np.mean([r for t, r in enumerate(A_Y1) if group_members_0[t] == 0])
-            funcs.append(func)
-            fp_rates.append(fp_group_rate)
-            fp_disp_rate = np.abs(fp_group_rate - FP)
-            fp_disp.append(fp_disp_rate)
-
-            # get the group negation
-            clf2 = linear_model.LogisticRegression()
-            A_Y1_c = [np.abs(1 - a) for a in A_Y1]
-            func_comp = clf2.fit(X_Y1, pd.DataFrame(A_Y1_c).values.ravel())
-            group_members_0 = func_comp.predict(X_Y1)
-            err_g_comp = np.mean([np.abs(group_members_0[i]-A_Y1_c[i]) for i in range(len(A_Y1_c))])
-            errs.append(err_g_comp)
-            # compute the false positive rate in the group found
-            fp_group_rate = np.mean([r for t, r in enumerate(A_Y1_c) if group_members_0[t] == 0])
-            fp_disp_rate = np.abs(fp_group_rate - FP)
-            funcs.append(func_comp)
-            fp_rates.append(fp_group_rate)
-            fp_disp.append(fp_disp_rate)
-            return [funcs[np.argmax(fp_disp)], fp_disp[np.argmax(fp_disp)], fp_rates[np.argmax(fp_disp)], errs[np.argmax(fp_disp)]]
+        return [func, fp_disp_rate, fp_group_rate, err_group]
 
 
 # p is a classifier
@@ -362,7 +292,7 @@ while iteration < max_iters:
     FP = ((iteration-1.0)/iteration)*FP + FP_new*(1.0/iteration)
     # dual player best responds: audit A via F, to get a group f: best
     # response to strategy up to t-1
-    f = get_group(A, p, X, X_prime, y, K, aud_orc, FP)
+    f = get_group(A, p, X, X_prime, y, FP, beta)
     group_membership = np.add(group_membership, f[0].predict(X_prime))
     group_membership = [g != 0 for g in group_membership]
     # cumulative group members up to time t
