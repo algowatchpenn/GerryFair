@@ -7,8 +7,7 @@
 # oracle: 'reg_oracle'
 # dataset: name of the dataset to use
 
-# run from command line: python Reg_Oracle_Fict.py 50 17 True communities
-# reg_oracle 10000 .001
+# run from command line: python Reg_Oracle_Fict.py 50 17 True communities reg_oracle 10000 .001
 
 import sys
 # get command line arguments
@@ -220,6 +219,17 @@ def learner_br(c_1t, X, y):
     return func
 
 
+def fit_weighted(q, x, y_t):
+    cost_0 = [0 if tuna == 0 else q[r] for r, tuna in enumerate(y_t)]
+    cost_1 = [0 if tuna == 1 else q[r] for r, tuna in enumerate(y_t)]
+    reg0 = linear_model.LinearRegression()
+    reg0.fit(x, cost_0)
+    reg1 = linear_model.LinearRegression()
+    reg1.fit(x, cost_1)
+    primal_model = Reg_Oracle_Class.RegOracle(reg0, reg1)
+    return primal_model
+
+
 # -----------------------------------------------------------------------------------------------------------
 # Fictitious Play Algorithm
 
@@ -227,7 +237,7 @@ stop = False
 n = X.shape[0]
 # initialize classifier with random weighting of the dataset
 # w initial weighting
-p = [fit_weighted([1.0 / n] * n, X, y, oracle)[0]]
+p = [fit_weighted([1.0 / n] * n, X, y)]
 iteration = 1
 errors_t = []
 fp_diff_t = []
