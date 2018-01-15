@@ -1,12 +1,14 @@
-# take CL arguments B, alpha, printflag, dataset
+# take CL arguments B, num_sens, printflag, dataset, oracle, max_iters, beta
 # B: max dual norm
-# alpha: disparity tolerance
+# beta: disparity tolerance
 # printflag: bool determines whether things are printed at each iteration
 # or only at the end
 # num_sens: number of sensitive features, in 1:18
-# K: number of times we draw a random classification of the dataset and audit at each round
-# plotflag: bool indicating whether to generate plots
+# oracle: 'reg_oracle'
 # dataset: name of the dataset to use
+
+# run from command line: python Reg_Oracle_Fict.py 50 17 True communities
+# reg_oracle 10000 .001
 
 import sys
 # get command line arguments
@@ -19,17 +21,12 @@ oracle = str(oracle)
 max_iters = int(max_iters)
 beta = float(beta)
 
-#B, num_sens, printflag, dataset, oracle, max_iters, beta = 6,18,'True','communities','reg_oracle',100,.01
 import clean_data
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
-#from matplotlib import pyplot as plt
 import random
-from sklearn import svm
 import Reg_Oracle_Class
-from sklearn import ensemble
-from sklearn import dummy
 random.seed(1)
 
 # print out the invoked parameters
@@ -83,11 +80,13 @@ X, X_prime, y = clean_the_dataset(num_sens)
 # Outputs:
 # error: the error of the average classifier found thus far
 #
+
+
 def gen_a(q, x, y, A, iter):
-    new_preds = np.multiply(1.0/iter, q.predict(x))
-    ds = np.multiply((iter-1.0)/iter, A)
+    new_preds = np.multiply(1.0 / iter, q.predict(x))
+    ds = np.multiply((iter - 1.0) / iter, A)
     ds = np.add(ds, new_preds)
-    error = np.mean([np.abs(ds[k]-y[k]) for k in range(len(y))])
+    error = np.mean([np.abs(ds[k] - y[k]) for k in range(len(y))])
     return [error, ds]
 
 
@@ -97,33 +96,38 @@ def gen_a(q, x, y, A, iter):
 # discrimination
 def get_group(A, p, X, X_sens, y_g, FP, beta):
 
-    A_0 = [a for u,a in enumerate(A) if y_g[u] == 0]
-    X_0 = pd.DataFrame([X_sens.iloc[u, :] for u, s in enumerate(y_g) if s == 0])
+    A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
+    X_0 = pd.DataFrame([X_sens.iloc[u, :]
+                        for u, s in enumerate(y_g) if s == 0])
     m = len(A_0)
-    cost_0 = [0]*m
-    cost_1 = -1/m*((FP-beta)-A_0)
+    cost_0 = [0] * m
+    cost_1 = -1 / m * ((FP - beta) - A_0)
     reg0 = linear_model.LinearRegression()
     reg0.fit(X_0, cost_0)
     reg1 = linear_model.LinearRegression()
     reg1.fit(X_0, cost_1)
     func = Reg_Oracle_Class.RegOracle(reg0, reg1)
     group_members_0 = func.predict(X_0)
-    err_group = np.mean([np.abs(group_members_0[i]-A_0[i]) for i in range(len(A_0))])
+    err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
+                         for i in range(len(A_0))])
     # get the false positive rate in group
-    fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
+    fp_group_rate = np.mean(
+        [r for t, r in enumerate(A_0) if group_members_0[t] == 1])
     fp_disp_rate = np.abs(fp_group_rate - FP)
 
     # negation
     cost_0_neg = [0] * m
-    cost_1_neg = -1/m * (A_0-(FP + beta))
+    cost_1_neg = -1 / m * (A_0 - (FP + beta))
     reg0_neg = linear_model.LinearRegression()
     reg0_neg.fit(X_0, cost_0_neg)
     reg1_neg = linear_model.LinearRegression()
     reg1_neg.fit(X_0, cost_1_neg)
     func_neg = Reg_Oracle_Class.RegOracle(reg0, reg1)
     group_members_0_neg = func_neg.predict(X_0)
-    err_group_neg = np.mean([np.abs(group_members_0_neg[i]-A_0[i]) for i in range(len(A_0))])
-    fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+    err_group_neg = np.mean(
+        [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
+    fp_group_rate_neg = np.mean(
+        [r for t, r in enumerate(A_0) if group_members_0[t] == 0])
     fp_disp_rate_neg = np.abs(fp_group_rate_neg - FP)
 
     # return group
@@ -145,115 +149,75 @@ def calc_disp(p, X, y_g, X_sens, g):
     FP = [A_p[i] for i, c in enumerate(y_g) if c == 0]
     FP = np.mean(FP)
     group_members = g.predict(X_sens)
-    fp_g = [A_p[i] for i, c in enumerate(y_g) if group_members[i] == 1 and c == 0]
+    fp_g = [A_p[i]
+            for i, c in enumerate(y_g) if group_members[i] == 1 and c == 0]
     if len(fp_g) == 0:
         return 0
     fp_g = np.mean(fp_g)
     return np.abs(FP - fp_g)
 
 
-# fits a weighted classification oracle to the Data set (X,y_t) with
-# weights w
-def eval_weighted(q, x, y_t, classifier):
-    score = 0
-    y_preds = classifier.predict(x)
-    score = 0
-    for l, z in enumerate(y_t):
-        if z != y_preds[l]:
-            score += q[l]
-    return score
-
-
-def fit_weighted(q, x, y_t, orc):
-    if orc == 'reg_oracle':
-        cost_0 = [0 if tuna == 0 else q[r] for r, tuna in enumerate(y_t)]
-        cost_1 = [0 if tuna == 1 else q[r] for r, tuna in enumerate(y_t)]
-        reg0 = linear_model.LinearRegression()
-        reg0.fit(x, cost_0)
-        reg1 = linear_model.LinearRegression()
-        reg1.fit(x, cost_1)
-        primal_model = Reg_Oracle_Class.RegOracle(reg0, reg1)
-        weighted_error = eval_weighted(q, x, y_t, primal_model)
-        return [primal_model, weighted_error]
-    if orc == 'svm':
-        primal_model = svm.SVC()
-    if orc == 'log':
-        primal_model = linear_model.LogisticRegression()
-    if orc == 'ada':
-        primal_model = ensemble.AdaBoostClassifier()
-    q_pos = [np.abs(z) for z in q]
-    # flip weights to handle negative weights
-    y_sign = [(1-y_t[j])*(1.0-np.sign(q[j]))/2.0 + y_t[j]*(1.0+np.sign(q[j]))/2.0 for j in range(len(y_t))]
-    # weight normalization
-    q_pos = np.multiply(1.0/np.mean(q_pos),q_pos)
-    primal_model.fit(x, pd.DataFrame(y_sign).values.ravel(), sample_weight=q_pos)
-    dummy_model = dummy.DummyClassifier()
-    dummy_model.fit(x, [np.round(np.mean(y_t))] * len(y_t))
-    weighted_error = eval_weighted(q, x, y_t, primal_model)
-    return [primal_model, weighted_error]
-
-
-def gen_sample(A):
-    return [np.random.binomial(1, A[length], 1) for length in range(len(A))]
-
-# update weights w to calculate the new p in the next iteration
-def update_weights(w, group, X_prime, y, B, iteration):
-    f_g = group
-    # get group assignments for most recent group
-    group_train = f_g.predict(X_prime)
-    # compute proportion of 0's in population and in group
-    n_0 = sum([1 for t in y if t == 0])
-    n_g = sum([1 for i, t in enumerate(y) if t == 0 and group_train[i] == 1])
-    C_s = B * np.sign(f[2] - FP)
-
-    # handle case when n_g = 0
-    if n_g == 0:
-        print('degenerate subgroup found')
-        return np.multiply(w, (iteration - 1) / float(iteration))
-    else:
-        w_g = 1.0 / n_g
-    if iteration > 1:
-        psi = (iteration - 1) / iteration
-    else:
-        psi = 1
-    w = np.multiply(w, psi)
-    weights = [0, (1.0 / iteration) * C_s *
-               (w_g - 1.0 / n_0), (-1.0 / iteration) * C_s * (1.0 / n_0)]
-
-    # compute data point weights
-    for i in range(n):
-        x_i = X_prime.iloc[i, :].values.reshape(1, -1)
-        if y[i] == 1:
-            w[i] += 0
-        if y[i] == 0 and f_g.predict(pd.DataFrame(x_i))[0] == 1:
-            w[i] += weights[1]
-        if y[i] == 0 and f_g.predict(pd.DataFrame(x_i))[0] == 0:
-            w[i] += weights[2]
-    return w
-
-# given a sequence of classifiers we want to print out the unfairness in each marginal coordinate
+# given a sequence of classifiers we want to print out the unfairness in
+# each marginal coordinate
 def calc_unfairness(A, X_prime, y_g, FP_p):
     unfairness = []
     n = X_prime.shape[1]
     sens_means = np.mean(X_prime, 0)
     for q in range(n):
-        group_members = [X_prime.iloc[i, q] > sens_means[q] for i in range(X_prime.shape[0])]
+        group_members = [X_prime.iloc[i, q] > sens_means[q]
+                         for i in range(X_prime.shape[0])]
         # calculate FP rate on group members
-        fp_g = [a for t, a in enumerate(A) if group_members[t] == 1 and y_g[t] == 0]
+        fp_g = [a for t, a in enumerate(
+            A) if group_members[t] == 1 and y_g[t] == 0]
         if len(fp_g) > 0:
             fp_g = np.mean(fp_g)
         else:
             fp_g = 0
         # calculate the fp rate on non-group members
-        group_members_neg = [1-g for g in group_members]
+        group_members_neg = [1 - g for g in group_members]
         # calculate FP rate on group members
-        fp_g_neg = [a for t, a in enumerate(A) if group_members_neg[t] == 1 and y_g[t] == 0]
+        fp_g_neg = [a for t, a in enumerate(
+            A) if group_members_neg[t] == 1 and y_g[t] == 0]
         if len(fp_g_neg) > 0:
             fp_g_neg = np.mean(fp_g_neg)
         else:
             fp_g_neg = 0
-        unfairness.append(np.max([np.abs(np.mean(fp_g)-FP_p), np.abs(np.mean(fp_g_neg)-FP_p)]))
+        unfairness.append(
+            np.max([np.abs(np.mean(fp_g) - FP_p), np.abs(np.mean(fp_g_neg) - FP_p)]))
     return unfairness
+
+
+# update c1 for y = 0
+def learner_costs(c_1, f, X_prime, y, B, iteration):
+    if iteration == 1:
+        return c_1
+    fp_g = f[2]
+    X_0_prime = pd.DataFrame([X_prime.iloc[u, :]
+                              for u, s in enumerate(y) if s == 0])
+    g_members = f[0].predict(X_0_prime)
+    m = len(c_1)
+    for t in range(m):
+        c_1[t] = (c_1[t] - 1.0 / m) * (iteration / (iteration - 1.0)) + \
+            B / iteration * g_members[t] * (fp_g - 1) + 1.0 / m
+    return c_1
+
+
+def learner_br(c_1t, X, y):
+    c_1t_new = c_1t[:]
+    n = len(y)
+    c_0 = [0] * n
+    c_1 = []
+    for s in range(n):
+        if y[s] == 0:
+            c_1.append(-1.0 / n)
+        else:
+            c_1.append(c_1t_new.pop(0))
+    reg0 = linear_model.LinearRegression()
+    reg0.fit(X, c_0)
+    reg1 = linear_model.LinearRegression()
+    reg1.fit(X, c_1)
+    func = Reg_Oracle_Class.RegOracle(reg0, reg1)
+    return func
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -272,10 +236,12 @@ size_t = []
 groups = []
 cum_group_mems = []
 # correspond to dual player first playing the group that is everyone
-w = [0.0] * n
+#w = [0.0] * n
+m = len([s for s in y if s == 0])
+c_1t = [1.0 / m] * m
 FP = 0
-A = [0.0]*n
-group_membership = [0.0]*n
+A = [0.0] * n
+group_membership = [0.0] * n
 while iteration < max_iters:
     print('iteration: {}'.format(iteration))
     # get algorithm decisions on X by randomizing on current set of p
@@ -287,7 +253,7 @@ while iteration < max_iters:
     # get the false positive rate of the classifier overall
     A_sample = p[-1].predict(X)
     FP_new = np.mean([A_sample[i] for i, c in enumerate(y) if c == 0])
-    FP = ((iteration-1.0)/iteration)*FP + FP_new*(1.0/iteration)
+    FP = ((iteration - 1.0) / iteration) * FP + FP_new * (1.0 / iteration)
     # dual player best responds: audit A via F, to get a group f: best
     # response to strategy up to t-1
     f = get_group(A, p, X, X_prime, y, FP, beta)
@@ -296,12 +262,10 @@ while iteration < max_iters:
     # cumulative group members up to time t
     group_members_t = np.sum(group_membership)
     cum_group_mems.append(group_members_t)
+
     # primal player best responds: cost-sensitive classification
-    # print(np.mean(w))
-    w_prime = np.add(w, [1.0 / n] * n)
-    #w_prime = np.multiply(w_prime, 1.0/np.mean(w_prime))
-    #print('w_prime: {}.'.format(w_prime))
-    p_t, lagrange = fit_weighted(w_prime, X, y, oracle)
+    p_t = learner_br(c_1t, X, y)
+
     # calculate the FP rate of the new p_t on the last group found
     fp_rate_after_fit = 0
     if iteration > 1:
@@ -316,19 +280,27 @@ while iteration < max_iters:
     group_train = f[0].predict(X_prime)
     size_t.append(np.mean(group_train))
     if iteration == 1:
-        print('most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(err,fp_diff_t[0], size_t[0]))
+        print(
+            'most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(
+                err,
+                fp_diff_t[0],
+                size_t[0]))
     # get unfairness on marginal subgroups
     unfairness = calc_unfairness(A, X_prime, y, FP)
     # print
     if printflag:
-        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_train)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(lagrange),'{:f}'.format(cum_group_mems[-1])))
+        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group: {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
+            err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_train)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1])))
         group_coef = f[0].b0.coef_ - f[0].b1.coef_
         print('YYY coefficients of g_t: {}'.format(group_coef),)
         print('Unfairness in marginal subgroups: {}'.format(unfairness),)
-    # update weights
-    w = update_weights(w, f[0], X_prime, y, B, iteration)
+
+    # update costs: dual player best responds
+    c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration)
+
     sys.stdout.flush()
     iteration += 1
+
 
 # evaluate fair classifier found
 D = gen_a(p[-1], X, y, A, iteration)
@@ -336,7 +308,7 @@ error_D = D[0]
 model = fit_weighted([1.0 / n] * n, X, y, oracle)[0]
 preds = model.predict(X)
 error_opt = np.mean([np.abs(c - preds[i]) for i, c in enumerate(y)])
-best_A = gen_a(model, X, y, [0.0]*n, iteration)
+best_A = gen_a(model, X, y, [0.0] * n, iteration)
 print('\n')
 print('final classifier error on the data set: {}'.format(error_D))
 print('best classifier error on the data set: {}'.format(error_opt))
@@ -346,12 +318,3 @@ print(
 print('FP base rate difference over time: {}'.format(fp_diff_t))
 print('Classifier error over time: {}'.format(errors_t))
 print('Group Size over time: {}'.format(size_t))
-
-# if plotflag:
-#     x = range(iteration)
-#     plt.plot(x, errors_t, label='classifier error')
-#     plt.plot(x, fp_diff_t, label='false positive difference in group')
-#     plt.plot(x, size_t, label='size of group found')
-#     plt.xlabel('iteration')
-#     plt.legend()
-#     plt.show()
