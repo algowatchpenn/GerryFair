@@ -7,8 +7,8 @@
 # oracle: 'reg_oracle'
 # dataset: name of the dataset to use
 
-# run from command line: python Reg_Oracle_Fict.py 50 17 True communities reg_oracle 10000 .001
-
+# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .001
+# run in python terminal: B, num_sens, printflag, dataset, oracle, max_iters, beta = 26, 18, True, 'communities', 'reg_oracle', 10000, .01
 import sys
 # get command line arguments
 B, num_sens, printflag, dataset, oracle, max_iters, beta = sys.argv[1:]
@@ -30,11 +30,11 @@ random.seed(1)
 
 # print out the invoked parameters
 print(
-    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1,dataset = {}, learning oracle = {}'.format(
+    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, beta = {}'.format(
         B,
         num_sens,
         dataset,
-        oracle))
+        oracle, beta))
 
 
 # Data Cleaning and Import
@@ -100,7 +100,7 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
                         for u, s in enumerate(y_g) if s == 0])
     m = len(A_0)
     cost_0 = [0] * m
-    cost_1 = -1 / m * ((FP - beta) - A_0)
+    cost_1 = -1.0/n * ((FP - beta) - A_0)
     reg0 = linear_model.LinearRegression()
     reg0.fit(X_0, cost_0)
     reg1 = linear_model.LinearRegression()
@@ -116,7 +116,7 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
 
     # negation
     cost_0_neg = [0] * m
-    cost_1_neg = -1 / m * (A_0 - (FP + beta))
+    cost_1_neg = -1.0/n * (A_0 - (FP + beta))
     reg0_neg = linear_model.LinearRegression()
     reg0_neg.fit(X_0, cost_0_neg)
     reg1_neg = linear_model.LinearRegression()
@@ -196,18 +196,17 @@ def learner_costs(c_1, f, X_prime, y, B, iteration):
     g_members = f[0].predict(X_0_prime)
     m = len(c_1)
     for t in range(m):
-        c_1[t] = (c_1[t] - 1.0 / m) * (iteration / (iteration - 1.0)) + \
-            B / iteration * g_members[t] * (fp_g - 1) + 1.0 / m
+        c_1[t] = (c_1[t] - 1.0 / n) * (iteration / (iteration - 1.0)) + \
+            B / iteration * g_members[t] * (fp_g - 1) + 1.0 / n
     return c_1
 
 
 def learner_br(c_1t, X, y):
     c_1t_new = c_1t[:]
-    n = len(y)
     c_0 = [0] * n
     c_1 = []
-    for s in range(n):
-        if y[s] == 0:
+    for r in range(n):
+        if y[r] == 1:
             c_1.append(-1.0 / n)
         else:
             c_1.append(c_1t_new.pop(0))
@@ -235,9 +234,10 @@ def fit_weighted(q, x, y_t):
 
 stop = False
 n = X.shape[0]
+m = len([s for s in y if s == 0])
 # initialize classifier with random weighting of the dataset
 # w initial weighting
-p = [fit_weighted([1.0 / n] * n, X, y)]
+p = [learner_br([1.0/n]*m, X, y)]
 iteration = 1
 errors_t = []
 fp_diff_t = []
@@ -260,13 +260,14 @@ while iteration < max_iters:
     err = emp_p[0]
     # Average decisions
     A = emp_p[1]
-    # get the false positive rate of the classifier overall
-    A_sample = p[-1].predict(X)
-    FP_new = np.mean([A_sample[i] for i, c in enumerate(y) if c == 0])
-    FP = ((iteration - 1.0) / iteration) * FP + FP_new * (1.0 / iteration)
+    # update FP to get the false positive rate of the mixture classifier
+    A_recent = p[-1].predict(X)
+    FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
+    FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
     # dual player best responds: audit A via F, to get a group f: best
     # response to strategy up to t-1
     f = get_group(A, p, X, X_prime, y, FP, beta)
+    # compute list of people who have been included in an identified subgroup up to time t
     group_membership = np.add(group_membership, f[0].predict(X_prime))
     group_membership = [g != 0 for g in group_membership]
     # cumulative group members up to time t
