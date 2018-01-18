@@ -131,9 +131,9 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
 
     # return group
     if fp_disp_rate_neg > fp_disp_rate:
-        return [func_neg, fp_disp_rate_neg, fp_group_rate_neg, err_group_neg]
+        return [func_neg, fp_disp_rate_neg, fp_group_rate_neg, err_group_neg, -1]
     else:
-        return [func, fp_disp_rate, fp_group_rate, err_group]
+        return [func, fp_disp_rate, fp_group_rate, err_group, 1]
 
 
 # p is a classifier
@@ -191,13 +191,14 @@ def learner_costs(c_1, f, X_prime, y, B, iteration):
     if iteration == 1:
         return c_1
     fp_g = f[2]
+    # store whether FP disparity was + or -
+    pos_neg = f[4]
     X_0_prime = pd.DataFrame([X_prime.iloc[u, :]
                               for u, s in enumerate(y) if s == 0])
     g_members = f[0].predict(X_0_prime)
     m = len(c_1)
     for t in range(m):
-        c_1[t] = (c_1[t] - 1.0 / n) * (iteration / (iteration - 1.0)) + \
-            B / iteration * g_members[t] * (fp_g - 1) + 1.0 / n
+        c_1[t] = (c_1[t] - 1.0/n) * (iteration / (iteration - 1.0)) + pos_neg*B/iteration * g_members[t] * (fp_g - 1) + 1.0/n
     return c_1
 
 
@@ -248,7 +249,7 @@ cum_group_mems = []
 # correspond to dual player first playing the group that is everyone
 #w = [0.0] * n
 m = len([s for s in y if s == 0])
-c_1t = [1.0 / m] * m
+c_1t = [1.0 / n] * m
 FP = 0
 A = [0.0] * n
 group_membership = [0.0] * n
@@ -267,6 +268,8 @@ while iteration < max_iters:
     # dual player best responds: audit A via F, to get a group f: best
     # response to strategy up to t-1
     f = get_group(A, p, X, X_prime, y, FP, beta)
+    # flag whether FP disparity was positive or negative
+    pos_neg = f[4]
     # compute list of people who have been included in an identified subgroup up to time t
     group_membership = np.add(group_membership, f[0].predict(X_prime))
     group_membership = [g != 0 for g in group_membership]
@@ -306,7 +309,7 @@ while iteration < max_iters:
         print('YYY coefficients of g_t: {}'.format(group_coef),)
         print('Unfairness in marginal subgroups: {}'.format(unfairness),)
 
-    # update costs: dual player best responds
+    # update costs: the primal player best responds
     c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration)
 
     sys.stdout.flush()
