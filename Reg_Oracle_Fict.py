@@ -8,7 +8,7 @@
 # dataset: name of the dataset to use
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .001
-# run in python terminal: B, num_sens, printflag, dataset, oracle, max_iters, beta = 26, 18, True, 'communities', 'reg_oracle', 10000, .01
+# run in python terminal: B, num_sens, printflag, dataset, oracle, max_iters, beta = 26, 18, True, 'communities', 'reg_oracle', 10000, .2
 import sys
 # get command line arguments
 B, num_sens, printflag, dataset, oracle, max_iters, beta = sys.argv[1:]
@@ -110,8 +110,11 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
     err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
                          for i in range(len(A_0))])
     # get the false positive rate in group
-    fp_group_rate = np.mean(
-        [r for t, r in enumerate(A_0) if group_members_0[t] == 1])
+    if sum(group_members_0) == 0:
+        fp_group_rate = 0
+    else:
+        fp_group_rate = np.mean(
+            [r for t, r in enumerate(A_0) if group_members_0[t] == 1])
     fp_disp_rate = np.abs(fp_group_rate - FP)
 
     # negation
@@ -125,8 +128,11 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
     group_members_0_neg = func_neg.predict(X_0)
     err_group_neg = np.mean(
         [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
-    fp_group_rate_neg = np.mean(
-        [r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+    if sum(group_members_0_neg) == 0:
+        fp_group_rate_neg = 0
+    else:
+        fp_group_rate_neg = np.mean(
+            [r for t, r in enumerate(A_0) if group_members_0[t] == 0])
     fp_disp_rate_neg = np.abs(fp_group_rate_neg - FP)
 
     # return group
@@ -253,6 +259,7 @@ c_1t = [1.0 / n] * m
 FP = 0
 A = [0.0] * n
 group_membership = [0.0] * n
+X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 while iteration < max_iters:
     print('iteration: {}'.format(iteration))
     # get algorithm decisions on X by randomizing on current set of p
@@ -291,8 +298,8 @@ while iteration < max_iters:
     fp_diff_t.append(np.abs(f[1]))
     errors_t.append(err)
     coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
-    group_train = f[0].predict(X_prime)
-    size_t.append(np.mean(group_train))
+    group_size = np.mean(f[0].predict(X_0))
+    size_t.append(group_size)
     if iteration == 1:
         print(
             'most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(
@@ -303,8 +310,8 @@ while iteration < max_iters:
     unfairness = calc_unfairness(A, X_prime, y, FP)
     # print
     if printflag:
-        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group: {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
-            err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_train)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1])))
+        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group, group_size*FP_diff: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
+            err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_size)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size*np.abs(f[1]))))
         group_coef = f[0].b0.coef_ - f[0].b1.coef_
         print('YYY coefficients of g_t: {}'.format(group_coef),)
         print('Unfairness in marginal subgroups: {}'.format(unfairness),)
