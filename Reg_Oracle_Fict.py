@@ -7,7 +7,7 @@
 # oracle: 'reg_oracle'
 # dataset: name of the dataset to use
 
-# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .001
+# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05
 # run in python terminal: B, num_sens, printflag, dataset, oracle, max_iters, beta = 26, 18, True, 'communities', 'reg_oracle', 10000, .2
 import sys
 # get command line arguments
@@ -194,8 +194,6 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 # update c1 for y = 0
 def learner_costs(c_1, f, X_prime, y, B, iteration):
-    if iteration == 1:
-        return c_1
     fp_g = f[2]
     # store whether FP disparity was + or -
     pos_neg = f[4]
@@ -204,7 +202,7 @@ def learner_costs(c_1, f, X_prime, y, B, iteration):
     g_members = f[0].predict(X_0_prime)
     m = len(c_1)
     for t in range(m):
-        c_1[t] = (c_1[t] - 1.0/n) * (iteration / (iteration - 1.0)) + pos_neg*B/iteration * g_members[t] * (fp_g - 1) + 1.0/n
+        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1)/iteration) + (1.0/n)*pos_neg*B/iteration * g_members[t] * (fp_g - 1) + 1.0/n
     return c_1
 
 
