@@ -193,7 +193,7 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 
 # update c1 for y = 0
-def learner_costs(c_1, f, X_prime, y, B, iteration):
+def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, beta):
     fp_g = f[2]
     # store whether FP disparity was + or -
     pos_neg = f[4]
@@ -202,7 +202,10 @@ def learner_costs(c_1, f, X_prime, y, B, iteration):
     g_members = f[0].predict(X_0_prime)
     m = len(c_1)
     for t in range(m):
-        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1)/iteration) + (1.0/n)*pos_neg*B/iteration * g_members[t] * (fp_g - 1) + 1.0/n
+        new_group_cost = (1.0/n)*pos_neg*B/iteration * g_members[t] * (fp_g - 1)
+        if fp_disp < beta:
+            new_group_cost = 0
+        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1)/iteration) + new_group_cost + 1.0/n
     return c_1
 
 
@@ -275,6 +278,7 @@ while iteration < max_iters:
     f = get_group(A, p, X, X_prime, y, FP, beta)
     # flag whether FP disparity was positive or negative
     pos_neg = f[4]
+    fp_disparity = f[1]
     # compute list of people who have been included in an identified subgroup up to time t
     group_membership = np.add(group_membership, f[0].predict(X_prime))
     group_membership = [g != 0 for g in group_membership]
@@ -315,8 +319,8 @@ while iteration < max_iters:
         print('Unfairness in marginal subgroups: {}'.format(unfairness),)
 
     # update costs: the primal player best responds
-    c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration)
-
+    c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration, fp_disparity, beta)
+    print('ZZZ learner costs: {}'.format(c_1t))
     sys.stdout.flush()
     iteration += 1
 
