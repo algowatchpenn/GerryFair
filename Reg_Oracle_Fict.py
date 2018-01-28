@@ -1,44 +1,34 @@
-# take CL arguments B, num_sens, printflag, dataset, oracle, max_iters, beta
-# B: max dual norm
-# beta: disparity tolerance
-# printflag: bool determines whether things are printed at each iteration
-# or only at the end
-# num_sens: number of sensitive features, in 1:18
-# oracle: 'reg_oracle'
-# dataset: name of the dataset to use
-
-# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'communities', 'reg_oracle', 10000, .001, 'gamma'
-# fairness_def can also be 'alpha_beta'
-import sys
-# get command line arguments
-# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
-# num_sens = int(num_sens)
-# printflag = sys.argv[3].lower() == 'true'
-# B = float(B)
-# dataset = str(dataset)
-# oracle = str(oracle)
-# max_iters = int(max_iters)
-# beta = float(beta)
-# fairness_df = str(fairness_def)
-
-
 import clean_data
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
 import random
 import Reg_Oracle_Class
+import sys
+
+# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'communities', 'reg_oracle',
+# 10000, .001, 'gamma'
+
+# get command line arguments
+B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
+num_sens = int(num_sens)
+printflag = sys.argv[3].lower() == 'true'
+B = float(B)
+dataset = str(dataset)
+oracle = str(oracle)
+max_iters = int(max_iters)
+beta = float(beta)
+fairness_def = str(fairness_def)
 random.seed(1)
 
 # print out the invoked parameters
 print(
-    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, beta = {}'.format(
+    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, beta = {}, formulation: {}'.format(
         B,
         num_sens,
         dataset,
-        oracle, beta))
-
+        oracle, beta, fairness_def))
 
 # Data Cleaning and Import
 f_name = 'clean_{}'.format(dataset)
@@ -255,8 +245,6 @@ def fit_weighted(q, x, y_t):
 stop = False
 n = X.shape[0]
 m = len([s for s in y if s == 0])
-# initialize classifier with random weighting of the dataset
-# w initial weighting
 p = [learner_br([1.0/n]*m, X, y)]
 iteration = 1
 errors_t = []
@@ -265,14 +253,14 @@ coef_t = []
 size_t = []
 groups = []
 cum_group_mems = []
-# correspond to dual player first playing the group that is everyone
-#w = [0.0] * n
 m = len([s for s in y if s == 0])
 c_1t = [1.0 / n] * m
 FP = 0
 A = [0.0] * n
 group_membership = [0.0] * n
 X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
+
+
 while iteration < max_iters:
     print('iteration: {}'.format(iteration))
     # get algorithm decisions on X by randomizing on current set of p
@@ -338,19 +326,3 @@ while iteration < max_iters:
     iteration += 1
 
 
-# evaluate fair classifier found
-D = gen_a(p[-1], X, y, A, iteration)
-error_D = D[0]
-model = fit_weighted([1.0 / n] * n, X, y, oracle)[0]
-preds = model.predict(X)
-error_opt = np.mean([np.abs(c - preds[i]) for i, c in enumerate(y)])
-best_A = gen_a(model, X, y, [0.0] * n, iteration)
-print('\n')
-print('final classifier error on the data set: {}'.format(error_D))
-print('best classifier error on the data set: {}'.format(error_opt))
-print(
-    'best classifier unfairness on the data set: {}'.format(
-        fp_diff_t[0]))
-print('FP base rate difference over time: {}'.format(fp_diff_t))
-print('Classifier error over time: {}'.format(errors_t))
-print('Group Size over time: {}'.format(size_t))
