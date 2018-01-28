@@ -7,11 +7,12 @@
 # oracle: 'reg_oracle'
 # dataset: name of the dataset to use
 
-# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .001
-# run in python terminal: B, num_sens, printflag, dataset, oracle, max_iters, beta = 26, 18, True, 'communities', 'reg_oracle', 10000, .2
+# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 26, 18, True, 'communities', 'reg_oracle', 10000, .2, 'gamma'
+# fairness_def can also be 'alpha_beta'
 import sys
 # get command line arguments
-B, num_sens, printflag, dataset, oracle, max_iters, beta = sys.argv[1:]
+B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
 num_sens = int(num_sens)
 printflag = sys.argv[3].lower() == 'true'
 B = float(B)
@@ -19,6 +20,8 @@ dataset = str(dataset)
 oracle = str(oracle)
 max_iters = int(max_iters)
 beta = float(beta)
+fairness_df = str(fairness_def)
+
 
 import clean_data
 import numpy as np
@@ -100,7 +103,10 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
                         for u, s in enumerate(y_g) if s == 0])
     m = len(A_0)
     cost_0 = [0] * m
-    cost_1 = -1.0/n * ((FP - beta) - A_0)
+    if fairness_def == 'alpha_beta':
+        cost_1 = -1.0/n * ((FP - beta) - A_0)
+    if fairness_def == 'gamma':
+        cost_1 = -1.0 / n * (FP - A_0)
     reg0 = linear_model.LinearRegression()
     reg0.fit(X_0, cost_0)
     reg1 = linear_model.LinearRegression()
@@ -119,7 +125,10 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
 
     # negation
     cost_0_neg = [0] * m
-    cost_1_neg = -1.0/n * (A_0 - (FP + beta))
+    if fairness_def == 'alpha_beta':
+        cost_1_neg = -1.0/n * (A_0 - (FP + beta))
+    if fairness_def == 'gamma':
+        cost_1_neg = -1.0 / n * (A_0 - FP)
     reg0_neg = linear_model.LinearRegression()
     reg0_neg.fit(X_0, cost_0_neg)
     reg1_neg = linear_model.LinearRegression()
@@ -193,9 +202,7 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 
 # update c1 for y = 0
-def learner_costs(c_1, f, X_prime, y, B, iteration):
-    if iteration == 1:
-        return c_1
+def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, group_size_0, beta):
     fp_g = f[2]
     # store whether FP disparity was + or -
     pos_neg = f[4]
@@ -204,7 +211,14 @@ def learner_costs(c_1, f, X_prime, y, B, iteration):
     g_members = f[0].predict(X_0_prime)
     m = len(c_1)
     for t in range(m):
-        c_1[t] = (c_1[t] - 1.0/n) * (iteration / (iteration - 1.0)) + pos_neg*B/iteration * g_members[t] * (fp_g - 1) + 1.0/n
+        new_group_cost = (1.0/n)*pos_neg*B/iteration * g_members[t] * (fp_g - 1)
+        if fairness_def == 'alpha_beta':
+            if fp_disp < beta:
+                new_group_cost = 0
+        if fairness_def == 'gamma':
+            if fp_disp*group_size_0 < beta:
+                new_group_cost = 0
+        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1)/iteration) + new_group_cost + 1.0/n
     return c_1
 
 
@@ -277,9 +291,11 @@ while iteration < max_iters:
     f = get_group(A, p, X, X_prime, y, FP, beta)
     # flag whether FP disparity was positive or negative
     pos_neg = f[4]
+    fp_disparity = f[1]
     # compute list of people who have been included in an identified subgroup up to time t
     group_membership = np.add(group_membership, f[0].predict(X_prime))
     group_membership = [g != 0 for g in group_membership]
+    group_size_0 = np.sum(f[0].predict(X_0))*1.0/n
     # cumulative group members up to time t
     group_members_t = np.sum(group_membership)
     cum_group_mems.append(group_members_t)
@@ -310,15 +326,15 @@ while iteration < max_iters:
     unfairness = calc_unfairness(A, X_prime, y, FP)
     # print
     if printflag:
-        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group, group_size*FP_diff: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
-            err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_size)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size*np.abs(f[1]))))
+        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
+            err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_size)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size_0*np.abs(f[1]))))
         group_coef = f[0].b0.coef_ - f[0].b1.coef_
         print('YYY coefficients of g_t: {}'.format(group_coef),)
         print('Unfairness in marginal subgroups: {}'.format(unfairness),)
 
     # update costs: the primal player best responds
-    c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration)
-
+    c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration, fp_disparity, group_size_0, beta)
+    print('ZZZ learner costs: {}'.format(c_1t))
     sys.stdout.flush()
     iteration += 1
 
