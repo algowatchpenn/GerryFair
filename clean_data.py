@@ -57,10 +57,9 @@ def clean_synthetic(num_sens):
     df = pd.read_csv('synthetic.csv')
     df = df.dropna()
     y_col = df.shape[1]-1
-    y_name = df.columns[y_col]
-    y = df.iloc[y_name]
-    df = df.drop(y_name, 1)
-    x_prime = df.iloc[:,0:num_sens]
+    y = df.iloc[:,y_col]
+    df = df.iloc[:, 0:(y_col-1)]
+    x_prime = df.iloc[:, 0:num_sens]
     return df, x_prime, y
 
 

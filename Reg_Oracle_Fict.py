@@ -8,19 +8,19 @@
 # dataset: name of the dataset to use
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 26, 18, True, 'communities', 'reg_oracle', 10000, .2, 'gamma'
+B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'communities', 'reg_oracle', 10000, .001, 'gamma'
 # fairness_def can also be 'alpha_beta'
 import sys
 # get command line arguments
-B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
-num_sens = int(num_sens)
-printflag = sys.argv[3].lower() == 'true'
-B = float(B)
-dataset = str(dataset)
-oracle = str(oracle)
-max_iters = int(max_iters)
-beta = float(beta)
-fairness_df = str(fairness_def)
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
+# num_sens = int(num_sens)
+# printflag = sys.argv[3].lower() == 'true'
+# B = float(B)
+# dataset = str(dataset)
+# oracle = str(oracle)
+# max_iters = int(max_iters)
+# beta = float(beta)
+# fairness_df = str(fairness_def)
 
 
 import clean_data
@@ -206,8 +206,7 @@ def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, group_size_0, beta)
     fp_g = f[2]
     # store whether FP disparity was + or -
     pos_neg = f[4]
-    X_0_prime = pd.DataFrame([X_prime.iloc[u, :]
-                              for u, s in enumerate(y) if s == 0])
+    X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
     g_members = f[0].predict(X_0_prime)
     m = len(c_1)
     for t in range(m):
