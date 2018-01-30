@@ -7,8 +7,7 @@ import Reg_Oracle_Class
 import sys
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'communities', 'reg_oracle',
-# 10000, .001, 'gamma'
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'communities', 'reg_oracle', 10000, .001, 'gamma'
 
 # get command line arguments
 B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
@@ -198,14 +197,17 @@ def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, group_size_0, beta)
     pos_neg = f[4]
     X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
     g_members = f[0].predict(X_0_prime)
+    m = len([o for o in y if o == 0])
+    g_weight_0 = np.sum(g_members)*1.0/m
     m = len(c_1)
     for t in range(m):
-        new_group_cost = (1.0/n)*pos_neg*B/iteration * g_members[t] * (fp_g - 1)
+        new_group_cost = (1.0/n)*pos_neg*B/iteration * g_members[t] * (g_weight_0 - 1)
         if fairness_def == 'alpha_beta':
             if fp_disp < beta:
                 new_group_cost = 0
         if fairness_def == 'gamma':
             if fp_disp*group_size_0 < beta:
+                print('barrier')
                 new_group_cost = 0
         c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1)/iteration) + new_group_cost + 1.0/n
     return c_1
@@ -313,7 +315,7 @@ while iteration < max_iters:
     unfairness = calc_unfairness(A, X_prime, y, FP)
     # print
     if printflag:
-        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, Lgrgian err p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
+        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, FP_rate_p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
             err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_size)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size_0*np.abs(f[1]))))
         group_coef = f[0].b0.coef_ - f[0].b1.coef_
         print('YYY coefficients of g_t: {}'.format(group_coef),)
