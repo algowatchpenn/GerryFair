@@ -7,7 +7,7 @@ import Reg_Oracle_Class
 import sys
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'synthetic', 'reg_oracle', 50, .001, 'gamma'
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'synthetic', 'reg_oracle', 50, .01, 'gamma'
 
 # get command line arguments
 B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
