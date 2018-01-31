@@ -7,7 +7,7 @@ import Reg_Oracle_Class
 import sys
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'communities', 'reg_oracle', 10000, .001, 'gamma'
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'synthetic', 'reg_oracle', 50, .001, 'gamma'
 
 # get command line arguments
 B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
@@ -203,13 +203,16 @@ def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, group_size_0, beta)
     for t in range(m):
         new_group_cost = (1.0/n)*pos_neg*B/iteration * g_members[t] * (g_weight_0 - 1)
         if fairness_def == 'alpha_beta':
-            if fp_disp < beta:
+            if np.abs(fp_disp) < beta:
+                if t == 0:
+                    print('barrier')
                 new_group_cost = 0
         if fairness_def == 'gamma':
-            if fp_disp*group_size_0 < beta:
-                print('barrier')
+            if np.abs(fp_disp)*group_size_0 < beta:
+                if t == 0:
+                    print('barrier')
                 new_group_cost = 0
-        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1)/iteration) + new_group_cost + 1.0/n
+        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
     return c_1
 
 
@@ -241,6 +244,24 @@ def fit_weighted(q, x, y_t):
     return primal_model
 
 
+def lagrangian_value(groups, yhat, B, FP, X, X_prime, y, iteration):
+    lagrange = 0
+    n = len(y)
+    err_pt = np.mean([np.abs(yhat[r]-y[r]) for r in range(n)])
+    for g in groups:
+        g_mems = g.predict(X_prime)
+        fp_g = np.mean([yhat[i] for i in range(n) if y[i] == 0 and g_mems[i] == 1])
+        fp_disp = fp_g-FP
+        group_size_0 = np.sum(f[0].predict(X_0)) * 1.0 / n
+        lagrange += B*1.0/(iteration-1.0)*fp_disp*group_size_0
+    return lagrange + err_pt
+
+
+
+
+
+
+
 # -----------------------------------------------------------------------------------------------------------
 # Fictitious Play Algorithm
 
@@ -265,18 +286,18 @@ X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 
 while iteration < max_iters:
     print('iteration: {}'.format(iteration))
-    # get algorithm decisions on X by randomizing on current set of p
+    # get t-1 mixture decisions on X by randomizing on current set of p
     emp_p = gen_a(p[-1], X, y, A, iteration)
-    # get the error of the classifier
+    # get the error of the t-1 mixture classifier
     err = emp_p[0]
     # Average decisions
     A = emp_p[1]
     # update FP to get the false positive rate of the mixture classifier
     A_recent = p[-1].predict(X)
+    # FP rate of t-1 mixture on new group g_t
     FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
     FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
-    # dual player best responds: audit A via F, to get a group f: best
-    # response to strategy up to t-1
+    # dual player best responds to strategy up to t-1
     f = get_group(A, p, X, X_prime, y, FP, beta)
     # flag whether FP disparity was positive or negative
     pos_neg = f[4]
@@ -291,6 +312,10 @@ while iteration < max_iters:
 
     # primal player best responds: cost-sensitive classification
     p_t = learner_br(c_1t, X, y)
+    A_t = p_t.predict(X)
+    FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
+    # get lagrangian value which primal player is minimizing
+    lagrange = lagrangian_value(groups, A_t, B, FP_t, X, X_prime, y, iteration)
 
     # calculate the FP rate of the new p_t on the last group found
     fp_rate_after_fit = 0
@@ -315,15 +340,16 @@ while iteration < max_iters:
     unfairness = calc_unfairness(A, X_prime, y, FP)
     # print
     if printflag:
-        print('XX av error time {}, FP group diff, Group Size, Err Audit, FP Rate Diff Lag, FP_rate_p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {} {}'.format(iteration, '{:f}'.format(
-            err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(np.mean(group_size)), '{:f}'.format(f[3]), '{:f}'.format(fp_rate_after_fit), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size_0*np.abs(f[1]))))
+        print('XX iteration: {}, average error, FP group diff, Group_Size_0, Lagrangian of p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {}'.format(iteration, '{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(lagrange), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size_0*np.abs(f[1]))))
         group_coef = f[0].b0.coef_ - f[0].b1.coef_
-        print('YYY coefficients of g_t: {}'.format(group_coef),)
-        print('Unfairness in marginal subgroups: {}'.format(unfairness),)
+        print('YY coefficients of g_t: {}'.format(group_coef),)
+        learner_coef = p_t.b0.coef_-p_t.b1.coef_
+        print('ZZ coefficients of learner t: {}'.format(learner_coef),)
+        # print('Unfairness in marginal subgroups: {}'.format(unfairness),)
 
     # update costs: the primal player best responds
     c_1t = learner_costs(c_1t, f, X_prime, y, B, iteration, fp_disparity, group_size_0, beta)
-    print('ZZZ learner costs: {}'.format(c_1t))
+    print('UU learner costs: {}'.format(np.unique(c_1t)))
     sys.stdout.flush()
     iteration += 1
 
