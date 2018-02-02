@@ -7,7 +7,7 @@ import Reg_Oracle_Class
 import sys
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 1000, 18, True, 'synthetic', 'reg_oracle', 50, .01, 'gamma'
+# B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = 100, 18, True, 'synthetic', 'reg_oracle', 50, .0001, 'gamma'
 
 # get command line arguments
 B, num_sens, printflag, dataset, oracle, max_iters, beta, fairness_def = sys.argv[1:]
@@ -85,17 +85,18 @@ def gen_a(q, x, y, A, iter):
 # returns the best classifier learning A via X_sense on the set y_g = 0
 # K: number of draws from p where we take the subgroup with largest
 # discrimination
-def get_group(A, p, X, X_sens, y_g, FP, beta):
+def get_group(A, p, X, X_sens, y_g, FP, beta, eta):
 
     A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
     X_0 = pd.DataFrame([X_sens.iloc[u, :]
                         for u, s in enumerate(y_g) if s == 0])
     m = len(A_0)
-    cost_0 = [0] * m
+    n = float(len(y_g))
+    cost_0 = [eta] * m
     if fairness_def == 'alpha_beta':
-        cost_1 = -1.0/n * ((FP - beta) - A_0)
+        cost_1 = -1.0/n * ((FP - beta) - A_0) + eta
     if fairness_def == 'gamma':
-        cost_1 = -1.0 / n * (FP - A_0)
+        cost_1 = -1.0 / n * (FP - A_0) + eta
     reg0 = linear_model.LinearRegression()
     reg0.fit(X_0, cost_0)
     reg1 = linear_model.LinearRegression()
@@ -113,11 +114,11 @@ def get_group(A, p, X, X_sens, y_g, FP, beta):
     fp_disp_rate = np.abs(fp_group_rate - FP)
 
     # negation
-    cost_0_neg = [0] * m
+    cost_0_neg = [eta] * m
     if fairness_def == 'alpha_beta':
-        cost_1_neg = -1.0/n * (A_0 - (FP + beta))
+        cost_1_neg = -1.0/n * (A_0 - (FP + beta)) + eta
     if fairness_def == 'gamma':
-        cost_1_neg = -1.0 / n * (A_0 - FP)
+        cost_1_neg = -1.0 / n * (A_0 - FP) + eta
     reg0_neg = linear_model.LinearRegression()
     reg0_neg.fit(X_0, cost_0_neg)
     reg1_neg = linear_model.LinearRegression()
@@ -192,16 +193,15 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 # update c1 for y = 0
 def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, group_size_0, beta):
-    fp_g = f[2]
     # store whether FP disparity was + or -
     pos_neg = f[4]
-    X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
+    X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
     g_members = f[0].predict(X_0_prime)
-    m = len([o for o in y if o == 0])
-    g_weight_0 = np.sum(g_members)*1.0/m
     m = len(c_1)
+    n = float(len(y))
+    g_weight_0 = np.sum(g_members)*(1.0/float(m))
     for t in range(m):
-        new_group_cost = (1.0/n)*pos_neg*B/iteration * g_members[t] * (g_weight_0 - 1)
+        new_group_cost = (1.0/n)*pos_neg*B*(1.0/iteration) * g_members[t] * (g_weight_0 - 1)
         if fairness_def == 'alpha_beta':
             if np.abs(fp_disp) < beta:
                 if t == 0:
@@ -216,15 +216,15 @@ def learner_costs(c_1, f, X_prime, y, B, iteration, fp_disp, group_size_0, beta)
     return c_1
 
 
-def learner_br(c_1t, X, y):
+def learner_br(c_1t, X, y, eta):
     c_1t_new = c_1t[:]
-    c_0 = [0] * n
+    c_0 = [eta] * n
     c_1 = []
     for r in range(n):
         if y[r] == 1:
-            c_1.append(-1.0 / n)
+            c_1.append((-1.0/n) + eta)
         else:
-            c_1.append(c_1t_new.pop(0))
+            c_1.append(c_1t_new.pop(0) + eta)
     reg0 = linear_model.LinearRegression()
     reg0.fit(X, c_0)
     reg1 = linear_model.LinearRegression()
@@ -252,7 +252,7 @@ def lagrangian_value(groups, yhat, B, FP, X, X_prime, y, iteration):
         g_mems = g.predict(X_prime)
         fp_g = np.mean([yhat[i] for i in range(n) if y[i] == 0 and g_mems[i] == 1])
         fp_disp = fp_g-FP
-        group_size_0 = np.sum(f[0].predict(X_0)) * 1.0 / n
+        group_size_0 = np.sum(f[0].predict(X_0)) * (1.0/n)
         lagrange += B*1.0/(iteration-1.0)*fp_disp*group_size_0
     return lagrange + err_pt
 
@@ -265,10 +265,12 @@ def lagrangian_value(groups, yhat, B, FP, X, X_prime, y, iteration):
 # -----------------------------------------------------------------------------------------------------------
 # Fictitious Play Algorithm
 
+# add to costs to stabilize performance
+eta = 1
 stop = False
 n = X.shape[0]
 m = len([s for s in y if s == 0])
-p = [learner_br([1.0/n]*m, X, y)]
+p = [learner_br([1.0/n]*m, X, y, eta)]
 iteration = 1
 errors_t = []
 fp_diff_t = []
@@ -286,6 +288,7 @@ X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 
 while iteration < max_iters:
     print('iteration: {}'.format(iteration))
+    eta = 1.0/iteration
     # get t-1 mixture decisions on X by randomizing on current set of p
     emp_p = gen_a(p[-1], X, y, A, iteration)
     # get the error of the t-1 mixture classifier
@@ -298,24 +301,25 @@ while iteration < max_iters:
     FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
     FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
     # dual player best responds to strategy up to t-1
-    f = get_group(A, p, X, X_prime, y, FP, beta)
+    f = get_group(A, p, X, X_prime, y, FP, beta, eta)
     # flag whether FP disparity was positive or negative
     pos_neg = f[4]
     fp_disparity = f[1]
     # compute list of people who have been included in an identified subgroup up to time t
     group_membership = np.add(group_membership, f[0].predict(X_prime))
     group_membership = [g != 0 for g in group_membership]
-    group_size_0 = np.sum(f[0].predict(X_0))*1.0/n
+    group_size_0 = np.sum(f[0].predict(X_0))*(1.0/n)
     # cumulative group members up to time t
     group_members_t = np.sum(group_membership)
     cum_group_mems.append(group_members_t)
 
     # primal player best responds: cost-sensitive classification
-    p_t = learner_br(c_1t, X, y)
+    p_t = learner_br(c_1t, X, y, eta)
     A_t = p_t.predict(X)
     FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
     # get lagrangian value which primal player is minimizing
     lagrange = lagrangian_value(groups, A_t, B, FP_t, X, X_prime, y, iteration)
+
 
     # calculate the FP rate of the new p_t on the last group found
     fp_rate_after_fit = 0
@@ -352,5 +356,6 @@ while iteration < max_iters:
     print('UU learner costs: {}'.format(np.unique(c_1t)))
     sys.stdout.flush()
     iteration += 1
+    iteration = float(iteration)
 
 
