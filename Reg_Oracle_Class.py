@@ -1,5 +1,6 @@
 # regression oracle class
 # b0 and b1 are regression objects from the class linear_model
+import numpy as np
 class RegOracle:
     def __init__(self, b0, b1):
         self.b0 = b0
@@ -18,4 +19,21 @@ class RegOracle:
             y_i = int(c_1 < c_0)
             y.append(y_i)
         return y
+
+
+class RandomLinearThresh:
+    def __init__(self, d):
+        self.coefficient = [np.random.uniform(-1, 1) for _ in range(d)]
+
+    def predict(self, X):
+        beta = self.coefficient
+        n = X.shape[0]
+        y = []
+        for i in range(n):
+            x_i = X.iloc[i, :]
+            c_1 = np.dot(beta, x_i)
+            y_i = int(c_1 > 0)
+            y.append(y_i)
+        return y
+
 
