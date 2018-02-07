@@ -19,7 +19,7 @@ oracle = str(oracle)
 max_iters = int(max_iters)
 beta = float(beta)
 fairness_def = str(fairness_def)
-random.seed(1)
+#random.seed(1)
 
 # print out the invoked parameters
 print(
