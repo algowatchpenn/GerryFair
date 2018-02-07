@@ -93,7 +93,7 @@ def get_group(A, p, X, X_sens, y_g, FP, beta, eta):
     m = len(A_0)
     n = float(len(y_g))
     d = X_sens.shape[1]
-    func = RandomLinearThresh(d)
+    func = Reg_Oracle_Class.RandomLinearThresh(d)
     group_members_0 = func.predict(X_0)
     err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
                          for i in range(len(A_0))])

@@ -32,7 +32,7 @@ class RandomLinearThresh:
         for i in range(n):
             x_i = X.iloc[i, :]
             c_1 = np.dot(beta, x_i)
-            y_i = int(c_1 > 0)
+            y_i = int(c_1 < 0)
             y.append(y_i)
         return y
 
