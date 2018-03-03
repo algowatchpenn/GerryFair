@@ -8,7 +8,7 @@ import sys
 from matplotlib import pyplot as plt
 
 # run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = 100, 18, True, 'communities', 'reg_oracle', 1000, .005, 'gamma'
+# C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = 100, 18, True, 'communities', 'reg_oracle', 2000, .0025, 'gamma'
 
 # get command line arguments
 C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
@@ -300,7 +300,7 @@ while iteration < max_iters:
     # unfairness = calc_unfairness(A, X_prime, y, FP)
     # print
     if printflag:
-        print('iteration:{}, average error: {}, fp_disparity_weighted: {}, group_size: {}'.format(iteration, '{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0)))
+        print('average error: {}, fp_disparity_weighted: {}, group_size: {}'.format('{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0)))
         #print('XX iteration: {}, average error, fp_disp_w, Group_Size_0, Lagrangian of p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {}'.format(iteration, '{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(lagrange), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size_0*np.abs(f[1]))))
         # group_coef = f[0].b0.coef_ - f[0].b1.coef_
         # print('YY coefficients of g_t: {}'.format(group_coef),)
