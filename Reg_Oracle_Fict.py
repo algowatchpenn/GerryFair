@@ -7,34 +7,6 @@ import Reg_Oracle_Class
 import sys
 from matplotlib import pyplot as plt
 
-# run from command line: python Reg_Oracle_Fict.py 26 18 True communities reg_oracle 10000 .05 'gamma'
-# C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = 100, 18, True, 'communities', 'reg_oracle', 2000, .0025, 'gamma'
-
-# get command line arguments
-C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
-num_sens = int(num_sens)
-printflag = sys.argv[3].lower() == 'true'
-C = float(C)
-dataset = str(dataset)
-oracle = str(oracle)
-max_iters = int(max_iters)
-gamma = float(gamma)
-fairness_def = str(fairness_def)
-random.seed(1)
-
-# print out the invoked parameters
-print('Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(
-        C,
-        num_sens,
-        dataset,
-        oracle, gamma, fairness_def))
-
-# Data Cleaning and Import
-f_name = 'clean_{}'.format(dataset)
-clean_the_dataset = getattr(clean_data, f_name)
-X, X_prime, y = clean_the_dataset(num_sens)
-
-
 # -----------------------------------------------------------------------------------------------------------
 # Helper Functions
 
@@ -62,7 +34,7 @@ def gen_a(q, x, y, A, iter):
 # returns the best classifier learning A via X_sense on the set y_g = 0
 # K: number of draws from p where we take the subgroup with largest
 # discrimination
-def get_group(A, p, X, X_sens, y_g, FP, gamma):
+def get_group(A, X, X_sens, y_g, FP):
 
     A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
     X_0 = pd.DataFrame([X_sens.iloc[u, :]
@@ -224,117 +196,133 @@ def lagrangian_value(groups, yhat, C, FP, X, X_prime, y, iteration):
 # -----------------------------------------------------------------------------------------------------------
 # Fictitious Play Algorithm
 
-stop = False
-n = X.shape[0]
-m = len([s for s in y if s == 0])
-p = [learner_br([1.0/n]*m, X, y)]
-iteration = 1
-errors_t = []
-fp_diff_t = []
-coef_t = []
-size_t = []
-groups = []
-cum_group_mems = []
-m = len([s for s in y if s == 0])
-c_1t = [1.0 / n] * m
-FP = 0
-A = [0.0] * n
-group_membership = [0.0] * n
-X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
+if __name__ == "__main__":
+
+    # run from command line: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
+    # C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = 100, 18, True, 'communities', 'reg_oracle', 2000, .0025, 'gamma'
+
+    # get command line arguments
+    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
+    num_sens = int(num_sens)
+    printflag = sys.argv[3].lower() == 'true'
+    C = float(C)
+    dataset = str(dataset)
+    oracle = str(oracle)
+    max_iters = int(max_iters)
+    gamma = float(gamma)
+    fairness_def = str(fairness_def)
+    random.seed(1)
+
+    # print out the invoked parameters
+    print(
+    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(
+        C,
+        num_sens,
+        dataset,
+        oracle, gamma, fairness_def))
+
+    # Data Cleaning and Import
+    f_name = 'clean_{}'.format(dataset)
+    clean_the_dataset = getattr(clean_data, f_name)
+    X, X_prime, y = clean_the_dataset(num_sens)
+    stop = False
+    n = X.shape[0]
+    m = len([s for s in y if s == 0])
+    p = [learner_br([1.0/n]*m, X, y)]
+    iteration = 1
+    errors_t = []
+    fp_diff_t = []
+    coef_t = []
+    size_t = []
+    groups = []
+    cum_group_mems = []
+    m = len([s for s in y if s == 0])
+    c_1t = [1.0 / n] * m
+    FP = 0
+    A = [0.0] * n
+    group_membership = [0.0] * n
+    X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
+
+    while iteration < max_iters:
+        print('iteration: {}'.format(iteration))
+        # get t-1 mixture decisions on X by randomizing on current set of p
+        emp_p = gen_a(p[-1], X, y, A, iteration)
+        # get the error of the t-1 mixture classifier
+        err = emp_p[0]
+        # Average decisions
+        A = emp_p[1]
+        # update FP to get the false positive rate of the mixture classifier
+        A_recent = p[-1].predict(X)
+        # FP rate of t-1 mixture on new group g_t
+        FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
+        FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
+        # dual player best responds to strategy up to t-1
+        f = get_group(A, X, X_prime, y, FP)
+        # flag whether FP disparity was positive or negative
+        pos_neg = f[4]
+        fp_disparity = f[1]
+        group_size_0 = np.sum(f[0].predict(X_0)) * (1.0 / n)
+
+        # compute list of people who have been included in an identified subgroup up to time t
+        group_membership = np.add(group_membership, f[0].predict(X_prime))
+        group_membership = [g != 0 for g in group_membership]
+        group_members_t = np.sum(group_membership)
+        cum_group_mems.append(group_members_t)
+
+        # primal player best responds: cost-sensitive classification
+        p_t = learner_br(c_1t, X, y)
+        A_t = p_t.predict(X)
+        FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
+        # get lagrangian value which primal player is minimizingt
+        # lagrange = lagrangian_value(groups, A_t, C, FP_t, X, X_prime, y, iteration)
+
+        # append new group, new p, fp_diff of group found, coefficients, group size
+        groups.append(f[0])
+        p.append(p_t)
+        fp_diff_t.append(np.abs(f[1]))
+        errors_t.append(err)
+        coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
+
+        if iteration == 1:
+            print(
+                'most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(
+                    err,
+                    fp_diff_t[0],
+                    group_size_0))
+        # get unfairness on marginal subgroups
+        # unfairness = calc_unfairness(A, X_prime, y, FP)
+        # print
+        if printflag:
+            print('ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(cum_group_mems[-1]/float(n))))
+            group_coef = f[0].b0.coef_ - f[0].b1.coef_
+            print('YY coefficients of g_t: {}'.format(group_coef),)
+
+        # update costs: the primal player best responds
+        c_1t = learner_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
+        # print('UU learner costs: {}'.format(np.unique(c_1t)))
+        sys.stdout.flush()
+        iteration += 1
+        iteration = float(iteration)
 
 
-while iteration < max_iters:
-    print('iteration: {}'.format(iteration))
-    # get t-1 mixture decisions on X by randomizing on current set of p
-    emp_p = gen_a(p[-1], X, y, A, iteration)
-    # get the error of the t-1 mixture classifier
-    err = emp_p[0]
-    # Average decisions
-    A = emp_p[1]
-    # update FP to get the false positive rate of the mixture classifier
-    A_recent = p[-1].predict(X)
-    # FP rate of t-1 mixture on new group g_t
-    FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
-    FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
-    # dual player best responds to strategy up to t-1
-    f = get_group(A, p, X, X_prime, y, FP, gamma)
-    # flag whether FP disparity was positive or negative
-    pos_neg = f[4]
-    fp_disparity = f[1]
-    # compute list of people who have been included in an identified subgroup up to time t
-    # group_membership = np.add(group_membership, f[0].predict(X_prime))
-    # group_membership = [g != 0 for g in group_membership]
-    group_size_0 = np.sum(f[0].predict(X_0))*(1.0/n)
-    # cumulative group members up to time t
-    # group_members_t = np.sum(group_membership)
-    # cum_group_mems.append(group_members_t)
+    # plot errors
+    x = range(max_iters-1)
+    y = errors_t
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    ax1.plot(x,y)
+    plt.ylabel('average error of mixture')
+    plt.xlabel('iterations')
+    plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
+    ax1.plot(x, [np.mean(y)]*len(y))
 
-    # primal player best responds: cost-sensitive classification
-    p_t = learner_br(c_1t, X, y)
-    A_t = p_t.predict(X)
-    FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
-    # get lagrangian value which primal player is minimizingt
-    # lagrange = lagrangian_value(groups, A_t, C, FP_t, X, X_prime, y, iteration)
-
-
-    # calculate the FP rate of the new p_t on the last group found
-    # fp_rate_after_fit = 0
-    # if iteration > 1:
-        # fp_rate_after_fit = calc_disp(
-           # p_t, X, y, X_prime, groups[len(groups) - 1])
-    # append new group, new p, fp_diff of group found, coefficients, group size
-    groups.append(f[0])
-    p.append(p_t)
-    fp_diff_t.append(np.abs(f[1]))
-    errors_t.append(err)
-    coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
-    # group_size = np.mean(f[0].predict(X_0))
-    # size_t.append(group_size)
-    if iteration == 1:
-        print(
-            'most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(
-                err,
-                fp_diff_t[0],
-                group_size_0))
-    # get unfairness on marginal subgroups
-    # unfairness = calc_unfairness(A, X_prime, y, FP)
-    # print
-    if printflag:
-        print('average error: {}, fp_disparity_weighted: {}, group_size: {}'.format('{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0)))
-        #print('XX iteration: {}, average error, fp_disp_w, Group_Size_0, Lagrangian of p_t, Cum_group, group_size_0*FP_diff: {} {} {} {} {} {}'.format(iteration, '{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(lagrange), '{:f}'.format(cum_group_mems[-1]), '{:f}'.format(group_size_0*np.abs(f[1]))))
-        # group_coef = f[0].b0.coef_ - f[0].b1.coef_
-        # print('YY coefficients of g_t: {}'.format(group_coef),)
-        # learner_coef = p_t.b0.coef_-p_t.b1.coef_
-        # print('ZZ coefficients of learner t: {}'.format(learner_coef),)
-        # print('Unfairness in marginal subgroups: {}'.format(unfairness),)
-
-    # update costs: the primal player best responds
-    c_1t = learner_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
-    # print('UU learner costs: {}'.format(np.unique(c_1t)))
-    sys.stdout.flush()
-    iteration += 1
-    iteration = float(iteration)
-
-# plot errors
-x = range(max_iters-1)
-y = errors_t
-fig1 = plt.figure()
-ax1 = fig1.add_subplot(111)
-ax1.plot(x,y)
-plt.ylabel('average error of mixture')
-plt.xlabel('iterations')
-plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-ax1.plot(x, [np.mean(y)]*len(y))
-
-# plot fp disparity
-x = range(max_iters-1)
-y = fp_diff_t
-fig2 = plt.figure()
-ax2 = fig2.add_subplot(111)
-ax2.plot(x, y)
-plt.ylabel('fp_diff*group_size')
-plt.xlabel('iterations')
-plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-ax2.plot(x, [gamma]*len(y))
-
-
+    # plot fp disparity
+    x = range(max_iters-1)
+    y = fp_diff_t
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
+    ax2.plot(x, y)
+    plt.ylabel('fp_diff*group_size')
+    plt.xlabel('iterations')
+    plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
+    ax2.plot(x, [gamma]*len(y))
