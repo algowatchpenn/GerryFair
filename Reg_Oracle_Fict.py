@@ -55,9 +55,10 @@ def get_group(A, X, X_sens, y_g, FP):
     if sum(group_members_0) == 0:
         fp_group_rate = 0
     else:
-        fp_group_rate = np.mean(
-            [r for t, r in enumerate(A_0) if group_members_0[t] == 1])
-    fp_disp_w = np.abs(fp_group_rate - FP)*np.sum(group_members_0)*1.0/n
+        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+    g_size_0 = np.sum(group_members_0) * 1.0 / n
+    fp_disp = np.abs(fp_group_rate - FP)
+    fp_disp_w = fp_disp * g_size_0
 
     # negation
     cost_0_neg = [0.0] * m
@@ -74,13 +75,15 @@ def get_group(A, X, X_sens, y_g, FP):
         fp_group_rate_neg = 0
     else:
         fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
-    fp_disp_w_neg = np.abs(fp_group_rate_neg - FP)*np.sum(group_members_0_neg)*1.0/n
+    g_size_0_neg = np.sum(group_members_0_neg) * 1.0 / n
+    fp_disp_neg = np.abs(fp_group_rate_neg - FP)
+    fp_disp_w_neg = fp_disp_neg*g_size_0_neg
 
    # return group
     if fp_disp_w_neg > fp_disp_w:
-        return [func_neg, fp_disp_w_neg, fp_group_rate_neg, err_group_neg, -1]
+        return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
     else:
-        return [func, fp_disp_w, fp_group_rate, err_group, 1]
+        return [func, fp_disp_w, fp_disp, err_group, 1]
 
 
 # p is a classifier

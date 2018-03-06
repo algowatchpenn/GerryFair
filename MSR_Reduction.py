@@ -4,27 +4,6 @@ import numpy as np
 from sklearn import linear_model
 import random
 import Reg_Oracle_Class
-random.seed(1)
-# get command line arguments
-num_sens, dataset, max_iters = sys.argv[1:]
-num_sens = int(num_sens)
-dataset = str(dataset)
-max_iters = float(max_iters)
-
-# Data Cleaning and Import
-f_name = 'clean_{}'.format(dataset)
-clean_the_dataset = getattr(clean_data_msr, f_name)
-X, X_prime, y = clean_the_dataset(num_sens)
-X, X_prime_cts, y = clean_the_dataset(num_sens)
-n = X.shape[0]
-# threshold sensitive features by average value
-sens_means = np.mean(X_prime)
-for col in X_prime.columns:
-    X.loc[(X[col] > sens_means[col]), col] = 1
-    X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
-    X.loc[(X[col] <= sens_means[col]), col] = 0
-    X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-
 
 # Helper Functions
 #
@@ -131,63 +110,85 @@ def fp_audit(A, df_sens, y):
         print('degenerate subgroup found: no unfairness')
     return group_members
 
+def MSR_preds(X, X_prime, X_prime_cts, y):
+    # initialize parameters
+    iteration = 1
+    hypothesis = []
+    max_disp = []
 
+    # set up lambda, p dictionaries
+    immutable_keys = [(s, t) for s in range(num_sens) for t in [0, 1]]
+    # get unique keys
+    immutable_keys = set(immutable_keys)
+    # convert back to list (iterable)
+    immutable_keys = list(immutable_keys)
 
-# initialize parameters
-iteration = 1
-hypothesis = []
-max_disp = []
+    # set values of prob_0
+    prob_0 = {key: 1.0 / n * np.sum([X_prime.iloc[i, key[0]] == key[1]
+                                     and y[i] == 0 for i in range(len(y))]) for key in immutable_keys}
 
-# set up lambda, p dictionaries
-immutable_keys = [(s, t) for s in range(num_sens) for t in [0, 1]]
-# get unique keys
-immutable_keys = set(immutable_keys)
-# convert back to list (iterable)
-immutable_keys = list(immutable_keys)
+    # only focus on groups with non-trivial mass (speed up convergence)
+    alpha = .01
+    key_alpha = [key for key in prob_0.keys() if prob_0[key] > alpha]
 
+    lambda_0 = {el: 0 for el in key_alpha}
+    prob_0 = {key: prob_0[key] for key in key_alpha}
 
-# set values of prob_0
-prob_0 = {key: 1.0 / n * np.sum([X_prime.iloc[i, key[0]] == key[1]
-                                 and y[i] == 0 for i in range(len(y))]) for key in immutable_keys}
+    q = [1.0 / n] * n
+    cost_0 = [0 if s == 0 else q[r] for r, s in enumerate(y)]
+    cost_1 = [0 if s == 1 else q[r] for r, s in enumerate(y)]
 
-# only focus on groups with non-trivial mass (speed up convergence)
-alpha = .01
-key_alpha = [key for key in prob_0.keys() if prob_0[key] > alpha]
-
-lambda_0 = {el: 0 for el in key_alpha}
-prob_0 = {key: prob_0[key] for key in key_alpha}
-
-q = [1.0 / n] * n
-cost_0 = [0 if s == 0 else q[r] for r, s in enumerate(y)]
-cost_1 = [0 if s == 1 else q[r] for r, s in enumerate(y)]
-
-h = fit_weighted(cost_0, cost_1, X)
-
-# print out the best classifier error
-h_dec = h.predict(X)
-best_error = np.mean([h_dec[i] != y[i] for i in range(n)])
-print('best classiifer error: {}'.format(best_error))
-
-
-while iteration < max_iters:
-    # primal player best responds via cost-sensitive learning oracle
-    print(iteration)
-    cost_0, cost_1 = update_costs(lambda_0, prob_0, X_prime, y)
     h = fit_weighted(cost_0, cost_1, X)
-    # update lambda via gradient descent
-    lambda_0, unfairness = next_lambda(
-        lambda_0, iteration, prob_0, h, X_prime, X, y)
-    hypothesis.append(h)
-    max_disp.append(np.max(unfairness))
-    acc = evaluate_classifier(h, X, y)
-    print('fp_disparity in each group: {}'.format(unfairness),)
-    print('max fp disparity in each group: {}'.format(np.max(unfairness)))
-    print('error of h: {}'.format(1.0 - acc))
-    A = h.predict(X)
-    fp_audit(A, X_prime_cts, y)
-    iteration += 1
-# print the decisions of the final classifier
-h = hypothesis[-1]
-print('decisions on the dataset of the final fair classifier: {}'.format(h.predict(X)))
 
-# audit the final classifier
+    # print out the best classifier error
+    h_dec = h.predict(X)
+    best_error = np.mean([h_dec[i] != y[i] for i in range(n)])
+    print('best classiifer error: {}'.format(best_error))
+
+    while iteration < max_iters:
+        # primal player best responds via cost-sensitive learning oracle
+        print(iteration)
+        cost_0, cost_1 = update_costs(lambda_0, prob_0, X_prime, y)
+        h = fit_weighted(cost_0, cost_1, X)
+        # update lambda via gradient descent
+        lambda_0, unfairness = next_lambda(
+            lambda_0, iteration, prob_0, h, X_prime, X, y)
+        hypothesis.append(h)
+        max_disp.append(np.max(unfairness))
+        acc = evaluate_classifier(h, X, y)
+        print('fp_disparity in each group: {}'.format(unfairness),)
+        print('max fp disparity in each group: {}'.format(np.max(unfairness)))
+        print('error of h: {}'.format(1.0 - acc))
+        A = h.predict(X)
+        fp_audit(A, X_prime_cts, y)
+        iteration += 1
+    # print the decisions of the final classifier
+    h = hypothesis[-1]
+    final_preds = h.predict(X)
+    print('decisions on the dataset of the final fair classifier: {}'.format(final_preds))
+    return final_preds
+
+
+if __name__ == "__main__":
+    random.seed(1)
+    # get command line arguments
+    num_sens, dataset, max_iters = sys.argv[1:]
+    num_sens = int(num_sens)
+    dataset = str(dataset)
+    max_iters = float(max_iters)
+    # Data Cleaning and Import
+    f_name = 'clean_{}'.format(dataset)
+    clean_the_dataset = getattr(clean_data_msr, f_name)
+    X, X_prime, y = clean_the_dataset(num_sens)
+    X, X_prime_cts, y = clean_the_dataset(num_sens)
+    n = X.shape[0]
+    # threshold sensitive features by average value
+    sens_means = np.mean(X_prime)
+    for col in X_prime.columns:
+        X.loc[(X[col] > sens_means[col]), col] = 1
+        X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
+        X.loc[(X[col] <= sens_means[col]), col] = 0
+        X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
+    print(MSR_preds(X, X_prime, X_prime_cts, y))
+
+
