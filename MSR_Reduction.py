@@ -110,7 +110,7 @@ def fp_audit(A, df_sens, y):
         print('degenerate subgroup found: no unfairness')
     return group_members
 
-def MSR_preds(X, X_prime, X_prime_cts, y):
+def MSR_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
     # initialize parameters
     iteration = 1
     hypothesis = []
@@ -143,7 +143,8 @@ def MSR_preds(X, X_prime, X_prime_cts, y):
     # print out the best classifier error
     h_dec = h.predict(X)
     best_error = np.mean([h_dec[i] != y[i] for i in range(n)])
-    print('best classiifer error: {}'.format(best_error))
+    if printflag:
+        print('best classiifer error: {}'.format(best_error))
 
     while iteration < max_iters:
         # primal player best responds via cost-sensitive learning oracle
@@ -156,16 +157,18 @@ def MSR_preds(X, X_prime, X_prime_cts, y):
         hypothesis.append(h)
         max_disp.append(np.max(unfairness))
         acc = evaluate_classifier(h, X, y)
-        print('fp_disparity in each group: {}'.format(unfairness),)
-        print('max fp disparity in each group: {}'.format(np.max(unfairness)))
-        print('error of h: {}'.format(1.0 - acc))
+        if printflag:
+            print('fp_disparity in each group: {}'.format(unfairness),)
+            print('max fp disparity in each group: {}'.format(np.max(unfairness)))
+            print('error of h: {}'.format(1.0 - acc))
         A = h.predict(X)
         fp_audit(A, X_prime_cts, y)
         iteration += 1
     # print the decisions of the final classifier
     h = hypothesis[-1]
     final_preds = h.predict(X)
-    print('decisions on the dataset of the final fair classifier: {}'.format(final_preds))
+    if printflag:
+        print('decisions on the dataset of the final fair classifier: {}'.format(final_preds))
     return final_preds
 
 
@@ -189,6 +192,6 @@ if __name__ == "__main__":
         X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
         X.loc[(X[col] <= sens_means[col]), col] = 0
         X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-    print(MSR_preds(X, X_prime, X_prime_cts, y))
+    print(MSR_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=False))
 
 

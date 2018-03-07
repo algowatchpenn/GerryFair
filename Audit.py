@@ -6,21 +6,8 @@ from sklearn import linear_model
 import random
 from sklearn.neural_network import *
 from Reg_Oracle_Fict import *
-random.seed(1)
-num_sens, dataset = sys.argv[1:]
-num_sens = int(num_sens)
-dataset = str(dataset)
-random.seed(1)
 from MSR_Reduction import *
 
-
-# print out the invoked parameters
-print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
-
-# Data Cleaning and Import
-f_name = 'clean_{}'.format(dataset)
-clean_the_dataset = getattr(clean_data, f_name)
-X, X_prime, y = clean_the_dataset(num_sens)
 
 def get_fp(preds, y):
     return np.mean([p for i,p in enumerate(preds) if y[i] == 0])
@@ -37,6 +24,20 @@ def audit(predictions, X, X_prime, y):
     print('sensitive attributes: {}'.format([c for c in X_prime.columns],))
 
 if __name__ == "__main__":
+    random.seed(1)
+    num_sens, dataset, max_iters = sys.argv[1:]
+    num_sens = int(num_sens)
+    dataset = str(dataset)
+    max_iters = int(max_iters)
+    random.seed(1)
+
+    # print out the invoked parameters
+    print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
+
+    # Data Cleaning and Import
+    f_name = 'clean_{}'.format(dataset)
+    clean_the_dataset = getattr(clean_data, f_name)
+    X, X_prime, y = clean_the_dataset(num_sens)
 
     # logistic regression
     model = linear_model.LogisticRegression()
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
         X.loc[(X[col] <= sens_means[col]), col] = 0
         X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-    yhat = MSR_preds(X, X_prime, X_prime_cts, y)
+    yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
     audit(yhat, X, X_prime, y)
 
 
