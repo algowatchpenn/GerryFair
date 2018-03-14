@@ -13,7 +13,7 @@ import pandas as pd
 # num_sens in 1:18
 def clean_communities(num_sens):
     # Data Cleaning and Import
-    df = pd.read_csv('communities.csv')
+    df = pd.read_csv('dataset/communities.csv')
     df = df.fillna(0)
 
     # sensitive variables are just racial distributions in the population and police force as well as foreign status
@@ -32,7 +32,7 @@ def clean_communities(num_sens):
 # num_sens in 1:9
 def clean_lawschool(num_sens):
     # Data Cleaning and Import
-    df = pd.read_csv('lawschool.csv')
+    df = pd.read_csv('dataset/lawschool.csv')
     df = df.dropna()
     # convert categorical column variables to 0,1
     df['gender'] = df['gender'].map({'female': 1, 'male': 0})

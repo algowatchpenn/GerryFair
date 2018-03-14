@@ -15,7 +15,7 @@ import pandas as pd
 def clean_communities(num_sens):
     """Clean communities & crime data set."""
     # Data Cleaning and Import
-    df = pd.read_csv('communities.csv')
+    df = pd.read_csv('dataset/communities.csv')
     df = df.fillna(0)
 
     # sensitive variables are just racial distributions in the population and police force as well as foreign status
@@ -36,7 +36,7 @@ def clean_communities(num_sens):
 def clean_lawschool(num_sens):
     """Clean law school data set."""
     # Data Cleaning and Import
-    df = pd.read_csv('lawschool.csv')
+    df = pd.read_csv('dataset/lawschool.csv')
     df = df.dropna()
     # convert categorical column variables to 0,1
     df['gender'] = df['gender'].map({'female': 1, 'male': 0})
@@ -59,7 +59,7 @@ def clean_lawschool(num_sens):
 
 def clean_synthetic(num_sens):
     """Clean synthetic data set, all features sensitive, y value is last col."""
-    df = pd.read_csv('synthetic.csv')
+    df = pd.read_csv('dataset/synthetic.csv')
     df = df.dropna()
     y_col = df.shape[1]-1
     y = df.iloc[:,y_col]
