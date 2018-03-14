@@ -25,4 +25,4 @@ Universit of Pennsylvania, Microsoft Research, Seth Neel, Michael Kearns, Aaron 
 
 ## Acknowledgments
 
-* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf   , whose algorithm is implemented in [a relative link](MSR_Reduction.py) and evaluated in [https://github.com/sethneel/fairness_gerrymandering/blob/auditor_best_response/Audit.py](Audit.py)
+* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf   , whose algorithm is implemented in [MSR_Reduction.py](MSR_Reduction.py) and evaluated in [Audit.py](Audit.py)
