@@ -1,18 +1,19 @@
-
 import numpy as np
 import pandas as pd
 
-# Documentation
-# For each data set 'name.csv' we create a function clean_name
+# documentation
+# output: clean data set, remove missing values and convert categorical values to binary, extract sensitive features
+# for each data set 'name.csv' we create a function clean_name
 # clean name takes parameter num_sens, which is the number of sensitive attributes to include
 # clean_name returns pandas data frames X, X_prime, where:
-# X is the full dataset of X values
+# X is the full data set of X values
 # X_prime is only the sensitive columns of X
 # y are the binary outcomes
-# to clean a dataset must remove missing values and convert categorical values to binary
+
 
 # num_sens in 1:18
 def clean_communities(num_sens):
+    """Clean communities & crime data set."""
     # Data Cleaning and Import
     df = pd.read_csv('communities.csv')
     df = df.fillna(0)
@@ -30,8 +31,10 @@ def clean_communities(num_sens):
     X_prime = df_sens
     return X, X_prime, y
 
+
 # num_sens in 1:17
 def clean_lawschool(num_sens):
+    """Clean law school data set."""
     # Data Cleaning and Import
     df = pd.read_csv('lawschool.csv')
     df = df.dropna()
@@ -53,7 +56,9 @@ def clean_lawschool(num_sens):
     x_prime = df.iloc[:, sens_features[0:num_sens]]
     return df, x_prime, y
 
+
 def clean_synthetic(num_sens):
+    """Clean synthetic data set, all features sensitive, y value is last col."""
     df = pd.read_csv('synthetic.csv')
     df = df.dropna()
     y_col = df.shape[1]-1

@@ -1,8 +1,7 @@
-
 import numpy as np
 import pandas as pd
 
-# Documentation
+# documentation
 # For each data set 'name.csv' we create a function clean_name
 # clean name takes parameter num_sens, which is the number of sensitive attributes to include
 # clean_name returns pandas data frames X, X_prime, where:

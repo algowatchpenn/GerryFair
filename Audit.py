@@ -1,20 +1,23 @@
-# to do: discard some columns to enlarge dataset
-import sys
-import numpy as np
-import pandas as pd
-from sklearn import linear_model
-import random
 from sklearn.neural_network import *
 from Reg_Oracle_Fict import *
 from MSR_Reduction import *
+from sklearn import svm
+from sklearn import neighbors
+
+# USAGE: python Audit.py 18 communities 100000
+
+# Helper Functions
 
 
 def get_fp(preds, y):
+    """Return the fp rate of preds wrt to true labels y."""
     return np.mean([p for i,p in enumerate(preds) if y[i] == 0])
 
 
 def audit(predictions, X, X_prime, y):
-
+    """Takes in predictions on dataset (X, X',y) and prints gamma-unfairness,
+    fp disparity, group size, group coefficients, and sensitive column names.
+    """
     FP = get_fp(predictions, y)
     aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = get_group(predictions, X_sens=X_prime, X=X, y_g=y, FP=FP)
     group_size = gamma_unfair/fp_in_group
@@ -23,7 +26,9 @@ def audit(predictions, X, X_prime, y):
     print('subgroup_coefficients: {}'.format(group_coefs),)
     print('sensitive attributes: {}'.format([c for c in X_prime.columns],))
 
+
 if __name__ == "__main__":
+
     random.seed(1)
     num_sens, dataset, max_iters = sys.argv[1:]
     num_sens = int(num_sens)

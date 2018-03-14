@@ -7,22 +7,23 @@ import Reg_Oracle_Class
 import sys
 from matplotlib import pyplot as plt
 
-# -----------------------------------------------------------------------------------------------------------
+# USAGE: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
+
+
 # Helper Functions
+# -----------------------------------------------------------------------------------------------------------
 
-
-# given a sequence of classifiers p, returns decisions on Data set X
 # Inputs:
 # A: the previous set of decisions (probabilities) up to time iter - 1
 # q: the most recent classifier found
 # x: the dataset
 # y: the labels
 # iter: the iteration
-#
 # Outputs:
-# error: the error of the average classifier found thus far
-#
+# error: the error of the average classifier found thus far (incorporating q)
 def gen_a(q, x, y, A, iter):
+    """Return the classifications of the average classifier at time iter."""
+
     new_preds = np.multiply(1.0 / iter, q.predict(x))
     ds = np.multiply((iter - 1.0) / iter, A)
     ds = np.add(ds, new_preds)
@@ -30,11 +31,10 @@ def gen_a(q, x, y, A, iter):
     return [error, ds]
 
 
-# given an algorithms decisions empirical history of decisions A, sensitive variables X_sense, and true y values y_g
-# returns the best classifier learning A via X_sense on the set y_g = 0
-# K: number of draws from p where we take the subgroup with largest
-# discrimination
 def get_group(A, X, X_sens, y_g, FP):
+    """Given decisions on X, sensitive attributes, labels, and FP rate audit wrt
+        to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
+    """
 
     A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
     X_0 = pd.DataFrame([X_sens.iloc[u, :]
@@ -62,7 +62,7 @@ def get_group(A, X, X_sens, y_g, FP):
 
     # negation
     cost_0_neg = [0.0] * m
-    cost_1_neg = -1.0 / n * (A_0 - FP)
+    cost_1_neg = -1.0 / n * (A_0-FP)
     reg0_neg = linear_model.LinearRegression()
     reg0_neg.fit(X_0, cost_0_neg)
     reg1_neg = linear_model.LinearRegression()
@@ -79,21 +79,23 @@ def get_group(A, X, X_sens, y_g, FP):
     fp_disp_neg = np.abs(fp_group_rate_neg - FP)
     fp_disp_w_neg = fp_disp_neg*g_size_0_neg
 
-   # return group
+    # return group
     if fp_disp_w_neg > fp_disp_w:
         return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
     else:
         return [func, fp_disp_w, fp_disp, err_group, 1]
 
 
-# p is a classifier
-# X is the data
-# X_sens is the sensitive data
-# y_g are the values
-# g is the group
-# calculates the false positive rate disparity of p with respect to a
-# specific group g
+# Inputs:
+# p: classifier
+# X: data set
+# X_sens: sensitive dataset
+# y_g: labels
+# g: group
+# Output:
+# fp disparity of p in group g
 def calc_disp(p, X, y_g, X_sens, g):
+    """Return the fp disparity in a group g."""
     A_p = p.predict(X)
     FP = [A_p[i] for i, c in enumerate(y_g) if c == 0]
     FP = np.mean(FP)
@@ -106,9 +108,60 @@ def calc_disp(p, X, y_g, X_sens, g):
     return np.abs(FP - fp_g)
 
 
-# given a sequence of classifiers we want to print out the unfairness in
-# each marginal coordinate
+def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
+    """Recursively update the costs from incorrectly predicting 1 for the learner."""
+    # store whether FP disparity was + or -
+    pos_neg = f[4]
+    X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
+    g_members = f[0].predict(X_0_prime)
+    m = len(c_1)
+    n = float(len(y))
+    g_weight_0 = np.sum(g_members)*(1.0/float(m))
+    for t in range(m):
+        new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * g_members[t] * (g_weight_0 - 1)
+        if np.abs(fp_disp) < gamma:
+            if t == 0:
+                print('barrier')
+            new_group_cost = 0
+        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
+    return c_1
+
+
+def learner_br(c_1t, X, y):
+    """Solve the CSC problem for the learner."""
+    c_1t_new = c_1t[:]
+    c_0 = [0.0] * n
+    c_1 = []
+    for r in range(n):
+        if y[r] == 1:
+            c_1.append((-1.0/n))
+        else:
+            c_1.append(c_1t_new.pop(0))
+    reg0 = linear_model.LinearRegression()
+    reg0.fit(X, c_0)
+    reg1 = linear_model.LinearRegression()
+    reg1.fit(X, c_1)
+    func = Reg_Oracle_Class.RegOracle(reg0, reg1)
+    return func
+
+
+# not currently printed
+def lagrangian_value(groups, yhat, C, FP, X, X_prime, y, iteration):
+    """Compute the lagrangian value wrt to a learner yhat and found groups in groups."""
+    lagrange = 0
+    n = len(y)
+    err_pt = np.mean([np.abs(yhat[r]-y[r]) for r in range(n)])
+    for g in groups:
+        g_mems = g.predict(X_prime)
+        fp_g = np.mean([yhat[i] for i in range(n) if y[i] == 0 and g_mems[i] == 1])
+        fp_disp = fp_g-FP
+        group_size_0 = np.sum(f[0].predict(X_0)) * (1.0/n)
+        lagrange += C*1.0/(iteration-1.0)*fp_disp*group_size_0
+    return lagrange + err_pt
+
+# not currently printed out
 def calc_unfairness(A, X_prime, y_g, FP_p):
+    """Calculate unfairness in marginal sensitive subgroups (thresholded)."""
     unfairness = []
     n = X_prime.shape[1]
     sens_means = np.mean(X_prime, 0)
@@ -136,73 +189,10 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
     return unfairness
 
 
-# update c1 for y = 0
-def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
-    # store whether FP disparity was + or -
-    pos_neg = f[4]
-    X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
-    g_members = f[0].predict(X_0_prime)
-    m = len(c_1)
-    n = float(len(y))
-    g_weight_0 = np.sum(g_members)*(1.0/float(m))
-    for t in range(m):
-        new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * g_members[t] * (g_weight_0 - 1)
-        if np.abs(fp_disp) < gamma:
-            if t == 0:
-                print('barrier')
-            new_group_cost = 0
-        c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-    return c_1
-
-
-def learner_br(c_1t, X, y):
-    c_1t_new = c_1t[:]
-    c_0 = [0.0] * n
-    c_1 = []
-    for r in range(n):
-        if y[r] == 1:
-            c_1.append((-1.0/n))
-        else:
-            c_1.append(c_1t_new.pop(0))
-    reg0 = linear_model.LinearRegression()
-    reg0.fit(X, c_0)
-    reg1 = linear_model.LinearRegression()
-    reg1.fit(X, c_1)
-    func = Reg_Oracle_Class.RegOracle(reg0, reg1)
-    return func
-
-
-def fit_weighted(q, x, y_t):
-    cost_0 = [0 if tuna == 0 else q[r] for r, tuna in enumerate(y_t)]
-    cost_1 = [0 if tuna == 1 else q[r] for r, tuna in enumerate(y_t)]
-    reg0 = linear_model.LinearRegression()
-    reg0.fit(x, cost_0)
-    reg1 = linear_model.LinearRegression()
-    reg1.fit(x, cost_1)
-    primal_model = Reg_Oracle_Class.RegOracle(reg0, reg1)
-    return primal_model
-
-
-def lagrangian_value(groups, yhat, C, FP, X, X_prime, y, iteration):
-    lagrange = 0
-    n = len(y)
-    err_pt = np.mean([np.abs(yhat[r]-y[r]) for r in range(n)])
-    for g in groups:
-        g_mems = g.predict(X_prime)
-        fp_g = np.mean([yhat[i] for i in range(n) if y[i] == 0 and g_mems[i] == 1])
-        fp_disp = fp_g-FP
-        group_size_0 = np.sum(f[0].predict(X_0)) * (1.0/n)
-        lagrange += C*1.0/(iteration-1.0)*fp_disp*group_size_0
-    return lagrange + err_pt
-
-
 # -----------------------------------------------------------------------------------------------------------
 # Fictitious Play Algorithm
 
 if __name__ == "__main__":
-
-    # run from command line: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
-    # C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = 100, 18, True, 'communities', 'reg_oracle', 2000, .0025, 'gamma'
 
     # get command line arguments
     C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
@@ -276,7 +266,7 @@ if __name__ == "__main__":
         p_t = learner_br(c_1t, X, y)
         A_t = p_t.predict(X)
         FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
-        # get lagrangian value which primal player is minimizingt
+        # get lagrangian value which primal player is minimizing
         # lagrange = lagrangian_value(groups, A_t, C, FP_t, X, X_prime, y, iteration)
 
         # append new group, new p, fp_diff of group found, coefficients, group size
@@ -306,7 +296,6 @@ if __name__ == "__main__":
         sys.stdout.flush()
         iteration += 1
         iteration = float(iteration)
-
 
     # plot errors
     x = range(max_iters-1)
