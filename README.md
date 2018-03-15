@@ -21,8 +21,8 @@ python Audit.py num_sensitive_feautures dataset max_iterations
 ```
 
 ## License
-Universit of Pennsylvania, Microsoft Research, Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
+University of Pennsylvania, Microsoft Research, Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
 
 ## Acknowledgments
 
-* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf   , whose algorithm is implemented in [MSR_Reduction.py](MSR_Reduction.py) and evaluated in [Audit.py](Audit.py)
+* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf, whose algorithm is implemented in [MSR_Reduction.py](MSR_Reduction.py) and evaluated in [Audit.py](Audit.py)
