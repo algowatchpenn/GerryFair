@@ -19,6 +19,13 @@ To audit for gamma unfairness on a dataset:
 ```python
 python Audit.py num_sensitive_feautures dataset max_iterations 
 ```
+## UCI Datasets
+# communities: http://archive.ics.uci.edu/ml/datasets/communities+and+crime
+# lawschool: 
+# adult: https://archive.ics.uci.edu/ml/datasets/adult
+# student: https://archive.ics.uci.edu/ml/datasets/student+performance (math grades)
+# synthetic dataset
+
 
 ## License
 University of Pennsylvania, Microsoft Research, Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
