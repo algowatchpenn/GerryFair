@@ -288,7 +288,7 @@ if __name__ == "__main__":
         if printflag:
             print('ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(cum_group_mems[-1]/float(n))))
             group_coef = f[0].b0.coef_ - f[0].b1.coef_
-            print('YY coefficients of g_t: {}'.format(group_coef),)
+            print('YY coefficients of g_t: {}'.format(list(group_coef)))
 
         # update costs: the primal player best responds
         c_1t = learner_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
