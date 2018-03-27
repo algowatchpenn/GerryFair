@@ -45,15 +45,13 @@ def heat_map(X, X_prime, y, A, eta, plot_name):
 if __name__ == "__main__":
 
     # experiments
-    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = 100, 2, True, 'communities', 'reg_oracle', 1000, .0001, 'gamma'
+    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, plot_name = 100, 2, True, 'communities', 'reg_oracle', 1000, .0001, 'gamma', 'test'
 
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
     X, X_prime, y = clean_the_dataset(num_sens)
-
-
-    # subsample dataset
+    # subsample
     num = 100
     col = 14
     X = X.iloc[0:num,0:col]
