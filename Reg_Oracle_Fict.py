@@ -303,6 +303,7 @@ if __name__ == "__main__":
     ax2.plot(x, [gamma]*len(y_t))
 
     # initial heat map
+    X_prime = X_prime.iloc[:,0:2]
     eta = .05
     heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting')
     # final heat map
