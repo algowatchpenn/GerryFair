@@ -6,6 +6,7 @@ import random
 import Reg_Oracle_Class
 import sys
 from matplotlib import pyplot as plt
+import heatmap
 
 # USAGE: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
 
@@ -86,28 +87,6 @@ def get_group(A, X, X_sens, y_g, FP):
         return [func, fp_disp_w, fp_disp, err_group, 1]
 
 
-# Inputs:
-# p: classifier
-# X: data set
-# X_sens: sensitive dataset
-# y_g: labels
-# g: group
-# Output:
-# fp disparity of p in group g
-def calc_disp(p, X, y_g, X_sens, g):
-    """Return the fp disparity in a group g."""
-    A_p = p.predict(X)
-    FP = [A_p[i] for i, c in enumerate(y_g) if c == 0]
-    FP = np.mean(FP)
-    group_members = g.predict(X_sens)
-    fp_g = [A_p[i]
-            for i, c in enumerate(y_g) if group_members[i] == 1 and c == 0]
-    if len(fp_g) == 0:
-        return 0
-    fp_g = np.mean(fp_g)
-    return np.abs(FP - fp_g)
-
-
 def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
     """Recursively update the costs from incorrectly predicting 1 for the learner."""
     # store whether FP disparity was + or -
@@ -129,6 +108,7 @@ def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
 
 def learner_br(c_1t, X, y):
     """Solve the CSC problem for the learner."""
+    n = len(y)
     c_1t_new = c_1t[:]
     c_0 = [0.0] * n
     c_1 = []
@@ -195,7 +175,7 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 if __name__ == "__main__":
 
     # get command line arguments
-    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
+    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = sys.argv[1:]
     num_sens = int(num_sens)
     printflag = sys.argv[3].lower() == 'true'
     C = float(C)
@@ -204,20 +184,23 @@ if __name__ == "__main__":
     max_iters = int(max_iters)
     gamma = float(gamma)
     fairness_def = str(fairness_def)
+    num = int(num)
+    col = int(col)
     random.seed(1)
 
     # print out the invoked parameters
-    print(
-    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(
-        C,
-        num_sens,
-        dataset,
-        oracle, gamma, fairness_def))
+    #print('Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(C,num_sens,dataset,oracle, gamma, fairness_def))
 
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
     X, X_prime, y = clean_the_dataset(num_sens)
+    # subsample
+    X = X.iloc[0:num, 0:col]
+    y = y[0:num]
+    X_prime = X_prime.iloc[0:num]
+
+
     stop = False
     n = X.shape[0]
     m = len([s for s in y if s == 0])
@@ -299,22 +282,29 @@ if __name__ == "__main__":
 
     # plot errors
     x = range(max_iters-1)
-    y = errors_t
+    y_t = errors_t
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    ax1.plot(x,y)
+    ax1.plot(x,y_t)
     plt.ylabel('average error of mixture')
     plt.xlabel('iterations')
     plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    ax1.plot(x, [np.mean(y)]*len(y))
+    ax1.plot(x, [np.mean(y_t)]*len(y_t))
 
     # plot fp disparity
     x = range(max_iters-1)
-    y = fp_diff_t
+    y_t = fp_diff_t
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.plot(x, y)
+    ax2.plot(x, y_t)
     plt.ylabel('fp_diff*group_size')
     plt.xlabel('iterations')
     plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    ax2.plot(x, [gamma]*len(y))
+    ax2.plot(x, [gamma]*len(y_t))
+
+    # initial heat map
+    eta = .05
+    heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting')
+    # final heat map
+    heatmap.heat_map(X, X_prime, y, A, eta, 'ending')
+
