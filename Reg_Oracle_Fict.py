@@ -323,7 +323,7 @@ if __name__ == "__main__":
     minimax3 = heatmap.heat_map(X, X_prime, y, A, eta, 'ending', mini=minimax[0], maxi=minimax[1])
 
     # MSR heat map
-    X_prime_cts = X_prime.iloc[:, :]
+    X_prime_cts = X_prime.copy()
     # threshold sensitive features by average value
     sens_means = np.mean(X_prime)
     for col in X_prime.columns:
