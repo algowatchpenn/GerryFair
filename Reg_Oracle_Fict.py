@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import clean_data
 import numpy as np
 import pandas as pd
@@ -7,6 +9,7 @@ import Reg_Oracle_Class
 import sys
 from matplotlib import pyplot as plt
 import heatmap
+from MSR_Reduction import *
 
 # USAGE: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
 
@@ -175,6 +178,7 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 if __name__ == "__main__":
 
     # get command line arguments
+    # C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = 100, 2, True, 'communities', 'reg_oracle', 10, .0001, 'gamma', 100, 18
     C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = sys.argv[1:]
     num_sens = int(num_sens)
     printflag = sys.argv[3].lower() == 'true'
@@ -198,7 +202,7 @@ if __name__ == "__main__":
     # subsample
     X = X.iloc[0:num, 0:col]
     y = y[0:num]
-    X_prime = X_prime.iloc[0:num]
+    X_prime = X_prime.iloc[0:num, :]
 
 
     stop = False
@@ -227,6 +231,9 @@ if __name__ == "__main__":
         err = emp_p[0]
         # Average decisions
         A = emp_p[1]
+        # store intermediate A for heatmap
+        if iteration == max_iters/2:
+            A_med = A
         # update FP to get the false positive rate of the mixture classifier
         A_recent = p[-1].predict(X)
         # FP rate of t-1 mixture on new group g_t
@@ -290,6 +297,7 @@ if __name__ == "__main__":
     plt.xlabel('iterations')
     plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
     ax1.plot(x, [np.mean(y_t)]*len(y_t))
+    plt.clf()
 
     # plot fp disparity
     x = range(max_iters-1)
@@ -301,11 +309,30 @@ if __name__ == "__main__":
     plt.xlabel('iterations')
     plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
     ax2.plot(x, [gamma]*len(y_t))
+    plt.clf()
 
     # initial heat map
-    X_prime = X_prime.iloc[:,0:2]
+    X_prime = X_prime.iloc[:, 0:2]
     eta = .05
-    heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting')
+    minimax = heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting', None, None)
+
+    # intermediate heat map
+    minimax2 = heatmap.heat_map(X, X_prime, y, A_med, eta, 'intermediate', mini=minimax[0], maxi=minimax[1])
+
     # final heat map
-    heatmap.heat_map(X, X_prime, y, A, eta, 'ending')
+    minimax3 = heatmap.heat_map(X, X_prime, y, A, eta, 'ending', mini=minimax[0], maxi=minimax[1])
+
+    # MSR heat map
+    X_prime_cts = X_prime
+    # threshold sensitive features by average value
+    sens_means = np.mean(X_prime)
+    for col in X_prime.columns:
+        X.loc[(X[col] > sens_means[col]), col] = 1
+        X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
+        X.loc[(X[col] <= sens_means[col]), col] = 0
+        X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
+    A_MSR = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
+
+    minimax4 = heatmap.heat_map(X, X_prime_cts, y, A_MSR, eta, 'MSR_ending', mini=minimax[0], maxi=minimax[1])
+
 

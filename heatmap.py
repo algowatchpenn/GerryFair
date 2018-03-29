@@ -20,7 +20,7 @@ def calc_disp(A_p, X, y_g, X_sens, g):
     return (FP - fp_g) * g_size_0
 
 
-def heat_map(X, X_prime, y, A, eta, plot_name):
+def heat_map(X, X_prime, y, A, eta, plot_name, mini=None, maxi=None):
     columns = [str(c) for c in X_prime.columns]
     columns.append('gamma-disparity')
     q = int(1/eta*1/eta)
@@ -36,10 +36,14 @@ def heat_map(X, X_prime, y, A, eta, plot_name):
             ind += 1.0
     mat_list = pd.DataFrame({c: list(mat[c]) for c in mat.columns})
     mat_piv = mat_list.pivot(index=mat.columns[0], columns=mat.columns[1], values=mat.columns[2])
-    figure = sns.heatmap(mat_piv, fmt='g')
+    if mini is None or maxi is None:
+        figure = sns.heatmap(mat_piv, fmt='g')
+    else:
+        figure = sns.heatmap(mat_piv, fmt='g', vmin=mini, vmax=maxi)
     fig = figure.get_figure()
     fig.savefig('{}'.format(plot_name))
     fig.clf()
+    return [np.min(mat.loc[:,'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity'])]
 
 
 if __name__ == "__main__":

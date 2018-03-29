@@ -11,6 +11,12 @@ import pandas as pd
 # y are the binary outcomes
 
 
+def center(X):
+    for col in X.columns:
+        X.loc[:, col] = X.loc[:, col]-np.mean(X.loc[:, col])
+    return X
+
+
 def one_hot_code(df1, sens_dict):
     cols = df1.columns
     for c in cols:
@@ -39,18 +45,18 @@ def clean_communities(num_sens):
     # Data Cleaning and Import
     df = pd.read_csv('dataset/communities.csv')
     df = df.fillna(0)
-
-    # sensitive variables are just racial distributions in the population and police force as well as foreign status
-    # median income and pct of illegal immigrants / related variables are not labeled sensitive
-    sens_features = [3, 4, 5, 6, 22, 23, 24, 25, 26, 27, 61, 62, 92, 105, 106, 107, 108, 109]
-    df_sens = df.iloc[:, sens_features[0:num_sens]]
     y = df['ViolentCrimesPerPop']
     q_y = np.percentile(y, 70)
     # convert y's to binary predictions on whether the neighborhood is
     # especially violent
     y = [np.round((1 + np.sign(s - q_y)) / 2) for s in y]
-    X = df.iloc[:, 0:122]
-    X_prime = df_sens
+
+    # sensitive variables are just racial distributions in the population and police force as well as foreign status
+    # median income and pct of illegal immigrants / related variables are not labeled sensitive
+    sens_features = [3, 4, 5, 6, 22, 23, 24, 25, 26, 27, 61, 62, 92, 105, 106, 107, 108, 109]
+    df_sens = df.iloc[:, sens_features[0:num_sens]]
+    X = center(df.iloc[:, 0:122])
+    X_prime = center(df_sens)
     return X, X_prime, y
 
 
