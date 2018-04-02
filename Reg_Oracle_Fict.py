@@ -200,9 +200,10 @@ if __name__ == "__main__":
     clean_the_dataset = getattr(clean_data, f_name)
     X, X_prime, y = clean_the_dataset(num_sens)
     # subsample
-    X = X.iloc[0:num, 0:col]
-    y = y[0:num]
-    X_prime = X_prime.iloc[0:num, :]
+    if num > 0:
+        X = X.iloc[0:num, 0:col]
+        y = y[0:num]
+        X_prime = X_prime.iloc[0:num, :]
 
 
     stop = False

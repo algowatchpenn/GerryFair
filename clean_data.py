@@ -114,6 +114,23 @@ def clean_adult(num_sens):
     return df, x_prime, y
 
 
+def clean_adultshort(num_sens):
+    df = pd.read_csv('dataset/adult.csv')
+    df = df.dropna()
+    # binarize and remove y value
+    df['income'] = df['income'].map({' <=50K': 0, ' >50K': 1})
+    y = df['income']
+    df = df.drop('income', 1)
+    # hot code categorical variables
+    sens_cols = ['marital-status', 'relationship', 'native-country', 'race', 'sex']
+    sens_dict = {c: 1 if c in sens_cols else 0 for c in df.columns}
+    df, sens_dict = one_hot_code(df, sens_dict)
+    sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
+    print('there are {} possible sensitive features'.format(len(sens_names)))
+    x_prime = df[sens_names[0:num_sens]]
+    return df, x_prime, y
+
+
 # currently 6 sensitive attributes
 def clean_student(num_sens):
     sens_cols = ['sex', 'Pstatus', 'guardian', 'famrel']

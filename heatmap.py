@@ -43,7 +43,8 @@ def heat_map(X, X_prime, y, A, eta, plot_name, mini=None, maxi=None):
     fig = figure.get_figure()
     fig.savefig('{}'.format(plot_name))
     fig.clf()
-    return [np.min(mat.loc[:,'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity'])]
+    mat_list.to_csv('{}.csv'.format(plot_name))
+    return [np.min(mat.loc[:, 'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity']), mat_list]
 
 
 if __name__ == "__main__":
