@@ -44,6 +44,7 @@ def heat_map(X, X_prime, y, A, eta, plot_name, mini=None, maxi=None):
     fig.savefig('{}'.format(plot_name))
     fig.clf()
     mat_list.to_csv('{}.csv'.format(plot_name))
+    print('zzz: {}'.format(mat_list))
     return [np.min(mat.loc[:, 'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity']), mat_list]
 
 
