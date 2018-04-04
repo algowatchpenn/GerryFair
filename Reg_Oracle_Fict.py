@@ -217,7 +217,7 @@ if __name__ == "__main__":
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
-    X, X_prime, y = clean_the_dataset(num_sens)
+    X, X_prime, y = clean_the_dataset()
     stop = False
     n = X.shape[0]
     m = len([s for s in y if s == 0])
