@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 import heatmap
 from MSR_Reduction import *
 
-# USAGE: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
+# USAGE: python Reg_Oracle_Fict.py 100 True communities reg_oracle 5 .006 'gamma'
 
 
 # Helper Functions
@@ -179,21 +179,15 @@ if __name__ == "__main__":
 
     # get command line arguments
     # C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = 100, 2, True, 'communities', 'reg_oracle', 10, .0001, 'gamma', 100, 18
-    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = sys.argv[1:]
-    num_sens = int(num_sens)
-    printflag = sys.argv[3].lower() == 'true'
+    C, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
+    printflag = sys.argv[2].lower() == 'true'
     C = float(C)
     dataset = str(dataset)
     oracle = str(oracle)
     max_iters = int(max_iters)
     gamma = float(gamma)
     fairness_def = str(fairness_def)
-    num = int(num)
-    col = int(col)
     random.seed(1)
-
-    # print out the invoked parameters
-    #print('Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(C,num_sens,dataset,oracle, gamma, fairness_def))
 
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
@@ -201,11 +195,16 @@ if __name__ == "__main__":
 
     X, X_prime, y = clean_the_dataset()
 
+
+    # print out the invoked parameters
+    print('Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(C, X_prime.shape[1], dataset, oracle, gamma, fairness_def))
+
     # subsample
-    if num > 0:
-        X = X.iloc[0:num, 0:col]
-        y = y[0:num]
-        X_prime = X_prime.iloc[0:num, :]
+    # if num > 0:
+    #     X = X.iloc[0:num, 0:col]
+    #     y = y[0:num]
+    #     X_prime = X_prime.iloc[0:num, :]
+
     stop = False
     n = X.shape[0]
     m = len([s for s in y if s == 0])
@@ -233,8 +232,18 @@ if __name__ == "__main__":
         # Average decisions
         A = emp_p[1]
         # store intermediate A for heatmap
-        if iteration == max_iters/2:
-            A_med = A
+        if iteration == max_iters/5:
+            A_1 = A
+
+        if iteration == 2*max_iters/5:
+            A_2 = A
+
+        if iteration == 3*max_iters/5:
+            A_3 = A
+
+        if iteration == 4*max_iters/5:
+            A_4 = A
+
         # update FP to get the false positive rate of the mixture classifier
         A_recent = p[-1].predict(X)
         # FP rate of t-1 mixture on new group g_t
@@ -315,13 +324,16 @@ if __name__ == "__main__":
     # initial heat map
     X_prime = X_prime.iloc[:, 0:2]
     eta = .05
-    minimax = heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting', None, None)
 
-    # intermediate heat map
-    minimax2 = heatmap.heat_map(X, X_prime, y, A_med, eta, 'intermediate', mini=minimax[0], maxi=minimax[1])
+    minimax1 = heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting', None, None)
 
-    # final heat map
-    minimax3 = heatmap.heat_map(X, X_prime, y, A, eta, 'ending', mini=minimax[0], maxi=minimax[1])
+    minimax2 = heatmap.heat_map(X, X_prime, y, A_2, eta, 'intermediate1', mini=minimax1[0], maxi=minimax1[1])
+
+    minimax3 = heatmap.heat_map(X, X_prime, y, A_3, eta, 'intermediate2', mini=minimax1[0], maxi=minimax1[1])
+
+    minimax4 = heatmap.heat_map(X, X_prime, y, A_4, eta, 'intermediate3', mini=minimax1[0], maxi=minimax1[1])
+
+    minimax5 = heatmap.heat_map(X, X_prime, y, A, eta, 'ending', mini=minimax1[0], maxi=minimax1[1])
 
     # MSR heat map
     X_prime_cts = X_prime.copy()
@@ -334,6 +346,6 @@ if __name__ == "__main__":
         X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
     A_MSR = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
 
-    minimax4 = heatmap.heat_map(X, X_prime_cts, y, A_MSR, eta, 'MSR_ending', mini=minimax[0], maxi=minimax[1])
+    minimax4 = heatmap.heat_map(X, X_prime_cts, y, A_MSR, eta, 'MSR_ending', mini=minimax1[0], maxi=minimax1[1])
 
 

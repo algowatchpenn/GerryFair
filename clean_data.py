@@ -17,6 +17,11 @@ def center(X):
     return X
 
 
+def add_intercept(X):
+    """Add all 1's column to predictor matrix"""
+    X['intercept'] = [1]*X.shape[0]
+
+
 def one_hot_code(df1, sens_dict):
     cols = df1.columns
     for c in cols:
@@ -39,7 +44,7 @@ def one_hot_code(df1, sens_dict):
     return df1, sens_dict
 
 
-# num_sens in 1:18
+# center data frame columns for visual purposes
 def clean_communities():
     """Clean communities & crime data set."""
     # Data Cleaning and Import
@@ -60,6 +65,10 @@ def clean_communities():
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
     x_prime = df[sens_names]
+    X = center(X)
+    # X = add_intercept(X)
+    x_prime = center(x_prime)
+    # x_prime = add_intercept(x_prime)
     return X, x_prime, y
 
 
@@ -125,22 +134,28 @@ def clean_adult():
     x_prime = df[sens_names]
     return df, x_prime, y
 
-
-def clean_adultshort(num_sens):
-    df = pd.read_csv('dataset/adult.csv')
+def clean_adultshort():
+    df = pd.read_csv('dataset/adultshort.csv')
     df = df.dropna()
     # binarize and remove y value
     df['income'] = df['income'].map({' <=50K': 0, ' >50K': 1})
     y = df['income']
     df = df.drop('income', 1)
     # hot code categorical variables
-    sens_cols = ['marital-status', 'relationship', 'native-country', 'race', 'sex']
+    sens_df = pd.read_csv('dataset/adultshort_protected.csv')
+    sens_cols = [str(c) for c in sens_df.columns if sens_df[c][0] == 1]
+    print('sensitive features: {}'.format(sens_cols))
     sens_dict = {c: 1 if c in sens_cols else 0 for c in df.columns}
     df, sens_dict = one_hot_code(df, sens_dict)
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
-    print('there are {} possible sensitive features'.format(len(sens_names)))
-    x_prime = df[sens_names[0:num_sens]]
-    return df, x_prime, y
+    print('there are {} sensitive features including derivative features'.format(len(sens_names)))
+    x_prime = df[sens_names]
+    x = center(df)
+    x_prime = center(x_prime)
+    return x, x_prime, y
+
+
+
 
 
 # currently 6 sensitive attributes
