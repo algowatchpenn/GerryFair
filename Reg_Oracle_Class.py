@@ -40,4 +40,20 @@ class RandomLinearThresh:
             y.append(y_i)
         return y
 
+class LinearThresh:
+    """Class hyperplane classifier."""
+    def __init__(self, d):
+        self.coefficient = d
+
+    def predict(self, X):
+        """Predict labels on data set X."""
+        beta = self.coefficient
+        n = X.shape[0]
+        y = []
+        for i in range(n):
+            x_i = X.iloc[i, :]
+            c_1 = np.dot(beta, x_i)
+            y_i = int(c_1 < 0)
+            y.append(y_i)
+        return y
 

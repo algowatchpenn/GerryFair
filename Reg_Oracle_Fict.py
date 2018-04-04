@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import clean_data
 import numpy as np
 import pandas as pd
@@ -6,6 +8,8 @@ import random
 import Reg_Oracle_Class
 import sys
 from matplotlib import pyplot as plt
+import heatmap
+from MSR_Reduction import *
 
 # USAGE: python Reg_Oracle_Fict.py 100 18 True communities reg_oracle 10000 .006 'gamma'
 
@@ -86,28 +90,6 @@ def get_group(A, X, X_sens, y_g, FP):
         return [func, fp_disp_w, fp_disp, err_group, 1]
 
 
-# Inputs:
-# p: classifier
-# X: data set
-# X_sens: sensitive dataset
-# y_g: labels
-# g: group
-# Output:
-# fp disparity of p in group g
-def calc_disp(p, X, y_g, X_sens, g):
-    """Return the fp disparity in a group g."""
-    A_p = p.predict(X)
-    FP = [A_p[i] for i, c in enumerate(y_g) if c == 0]
-    FP = np.mean(FP)
-    group_members = g.predict(X_sens)
-    fp_g = [A_p[i]
-            for i, c in enumerate(y_g) if group_members[i] == 1 and c == 0]
-    if len(fp_g) == 0:
-        return 0
-    fp_g = np.mean(fp_g)
-    return np.abs(FP - fp_g)
-
-
 def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
     """Recursively update the costs from incorrectly predicting 1 for the learner."""
     # store whether FP disparity was + or -
@@ -129,6 +111,7 @@ def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
 
 def learner_br(c_1t, X, y):
     """Solve the CSC problem for the learner."""
+    n = len(y)
     c_1t_new = c_1t[:]
     c_0 = [0.0] * n
     c_1 = []
@@ -195,7 +178,8 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 if __name__ == "__main__":
 
     # get command line arguments
-    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def = sys.argv[1:]
+    # C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = 100, 2, True, 'communities', 'reg_oracle', 10, .0001, 'gamma', 100, 18
+    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, num, col = sys.argv[1:]
     num_sens = int(num_sens)
     printflag = sys.argv[3].lower() == 'true'
     C = float(C)
@@ -204,20 +188,24 @@ if __name__ == "__main__":
     max_iters = int(max_iters)
     gamma = float(gamma)
     fairness_def = str(fairness_def)
+    num = int(num)
+    col = int(col)
     random.seed(1)
 
     # print out the invoked parameters
-    print(
-    'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(
-        C,
-        num_sens,
-        dataset,
-        oracle, gamma, fairness_def))
+    #print('Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, learning oracle = {}, gamma = {}, formulation: {}'.format(C,num_sens,dataset,oracle, gamma, fairness_def))
 
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
+
     X, X_prime, y = clean_the_dataset()
+
+    # subsample
+    if num > 0:
+        X = X.iloc[0:num, 0:col]
+        y = y[0:num]
+        X_prime = X_prime.iloc[0:num, :]
     stop = False
     n = X.shape[0]
     m = len([s for s in y if s == 0])
@@ -244,6 +232,9 @@ if __name__ == "__main__":
         err = emp_p[0]
         # Average decisions
         A = emp_p[1]
+        # store intermediate A for heatmap
+        if iteration == max_iters/2:
+            A_med = A
         # update FP to get the false positive rate of the mixture classifier
         A_recent = p[-1].predict(X)
         # FP rate of t-1 mixture on new group g_t
@@ -299,22 +290,50 @@ if __name__ == "__main__":
 
     # plot errors
     x = range(max_iters-1)
-    y = errors_t
+    y_t = errors_t
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    ax1.plot(x,y)
+    ax1.plot(x,y_t)
     plt.ylabel('average error of mixture')
     plt.xlabel('iterations')
     plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    ax1.plot(x, [np.mean(y)]*len(y))
+    ax1.plot(x, [np.mean(y_t)]*len(y_t))
+    plt.clf()
 
     # plot fp disparity
     x = range(max_iters-1)
-    y = fp_diff_t
+    y_t = fp_diff_t
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.plot(x, y)
+    ax2.plot(x, y_t)
     plt.ylabel('fp_diff*group_size')
     plt.xlabel('iterations')
     plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    ax2.plot(x, [gamma]*len(y))
+    ax2.plot(x, [gamma]*len(y_t))
+    plt.clf()
+
+    # initial heat map
+    X_prime = X_prime.iloc[:, 0:2]
+    eta = .05
+    minimax = heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting', None, None)
+
+    # intermediate heat map
+    minimax2 = heatmap.heat_map(X, X_prime, y, A_med, eta, 'intermediate', mini=minimax[0], maxi=minimax[1])
+
+    # final heat map
+    minimax3 = heatmap.heat_map(X, X_prime, y, A, eta, 'ending', mini=minimax[0], maxi=minimax[1])
+
+    # MSR heat map
+    X_prime_cts = X_prime.copy()
+    # threshold sensitive features by average value
+    sens_means = np.mean(X_prime)
+    for col in X_prime.columns:
+        X.loc[(X[col] > sens_means[col]), col] = 1
+        X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
+        X.loc[(X[col] <= sens_means[col]), col] = 0
+        X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
+    A_MSR = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
+
+    minimax4 = heatmap.heat_map(X, X_prime_cts, y, A_MSR, eta, 'MSR_ending', mini=minimax[0], maxi=minimax[1])
+
+
