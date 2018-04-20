@@ -59,7 +59,7 @@ def get_group(A, X, X_sens, y_g, FP):
     if sum(group_members_0) == 0:
         fp_group_rate = 0
     else:
-        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
     g_size_0 = np.sum(group_members_0) * 1.0 / n
     fp_disp = np.abs(fp_group_rate - FP)
     fp_disp_w = fp_disp * g_size_0
