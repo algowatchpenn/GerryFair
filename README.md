@@ -28,7 +28,7 @@ python Audit.py num_sensitive_feautures dataset max_iterations
 
 
 ## License
-University of Pennsylvania, Microsoft Research, Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
+Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
 
 ## Acknowledgments
 
