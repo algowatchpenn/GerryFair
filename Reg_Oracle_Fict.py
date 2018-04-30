@@ -1,6 +1,6 @@
 # Version Created: 20 April 2018
-import matplotlib
-matplotlib.use('TkAgg')
+# import matplotlib
+# matplotlib.use('TkAgg')
 import clean_data
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ from sklearn import linear_model
 import random
 import Reg_Oracle_Class
 import sys
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import heatmap
 from MSR_Reduction import *
 
@@ -299,28 +299,28 @@ if __name__ == "__main__":
         iteration = float(iteration)
 
     # plot errors
-    x = range(max_iters-1)
-    y_t = errors_t
-    fig1 = plt.figure()
-    ax1 = fig1.add_subplot(111)
-    ax1.plot(x,y_t)
-    plt.ylabel('average error of mixture')
-    plt.xlabel('iterations')
-    plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    ax1.plot(x, [np.mean(y_t)]*len(y_t))
-    plt.clf()
-
-    # plot fp disparity
-    x = range(max_iters-1)
-    y_t = fp_diff_t
-    fig2 = plt.figure()
-    ax2 = fig2.add_subplot(111)
-    ax2.plot(x, y_t)
-    plt.ylabel('fp_diff*group_size')
-    plt.xlabel('iterations')
-    plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    ax2.plot(x, [gamma]*len(y_t))
-    plt.clf()
+    # x = range(max_iters-1)
+    # y_t = errors_t
+    # fig1 = plt.figure()
+    # ax1 = fig1.add_subplot(111)
+    # ax1.plot(x,y_t)
+    # plt.ylabel('average error of mixture')
+    # plt.xlabel('iterations')
+    # plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
+    # ax1.plot(x, [np.mean(y_t)]*len(y_t))
+    # plt.clf()
+    #
+    # # plot fp disparity
+    # x = range(max_iters-1)
+    # y_t = fp_diff_t
+    # fig2 = plt.figure()
+    # ax2 = fig2.add_subplot(111)
+    # ax2.plot(x, y_t)
+    # plt.ylabel('fp_diff*group_size')
+    # plt.xlabel('iterations')
+    # plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
+    # ax2.plot(x, [gamma]*len(y_t))
+    # plt.clf()
 
     # initial heat map
     X_prime = X_prime.iloc[:, 0:2]

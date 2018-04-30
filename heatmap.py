@@ -1,8 +1,8 @@
-import matplotlib
-matplotlib.use('TkAgg')
+#import matplotlib
+#matplotlib.use('TkAgg')
 from Reg_Oracle_Fict import *
 from Reg_Oracle_Class import *
-import seaborn as sns
+#import seaborn as sns
 
 def calc_disp(A_p, X, y_g, X_sens, g):
     """Return the fp disparity in a group g."""
@@ -36,13 +36,13 @@ def heat_map(X, X_prime, y, A, eta, plot_name, mini=None, maxi=None):
             ind += 1.0
     mat_list = pd.DataFrame({c: list(mat[c]) for c in mat.columns})
     mat_piv = mat_list.pivot(index=mat.columns[0], columns=mat.columns[1], values=mat.columns[2])
-    if mini is None or maxi is None:
-        figure = sns.heatmap(mat_piv, fmt='g')
-    else:
-        figure = sns.heatmap(mat_piv, fmt='g', vmin=mini, vmax=maxi)
-    fig = figure.get_figure()
-    fig.savefig('{}'.format(plot_name))
-    fig.clf()
+    #if mini is None or maxi is None:
+    #    figure = sns.heatmap(mat_piv, fmt='g')
+    #else:
+    #    figure = sns.heatmap(mat_piv, fmt='g', vmin=mini, vmax=maxi)
+    # fig = figure.get_figure()
+    # fig.savefig('{}'.format(plot_name))
+    # fig.clf()
     mat_list.to_csv('{}.csv'.format(plot_name))
     print('zzz: {}'.format(mat_list))
     return [np.min(mat.loc[:, 'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity']), mat_list]
