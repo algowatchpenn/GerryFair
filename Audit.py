@@ -30,19 +30,20 @@ def audit(predictions, X, X_prime, y):
 if __name__ == "__main__":
 
     random.seed(1)
-    num_sens, dataset, max_iters = sys.argv[1:]
-    num_sens = int(num_sens)
+    dataset, max_iters = sys.argv[1:]
     dataset = str(dataset)
     max_iters = int(max_iters)
-    random.seed(1)
 
-    # print out the invoked parameters
-    print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
+
 
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
-    X, X_prime, y = clean_the_dataset(num_sens)
+    X, X_prime, y = clean_the_dataset()
+
+    # print out the invoked parameters
+    num_sens = X_prime.shape[1]
+    print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
 
     # logistic regression
     model = linear_model.LogisticRegression()
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
 
     # MSR reduction with Reg Oracle
-    X, X_prime_cts, y = clean_the_dataset(num_sens)
+    X, X_prime_cts, y = clean_the_dataset()
     n = X.shape[0]
     # threshold sensitive features by average value
     sens_means = np.mean(X_prime)
