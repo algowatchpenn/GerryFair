@@ -65,12 +65,31 @@ def clean_communities():
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
     x_prime = df[sens_names]
-    X = center(X)
+    #X = center(X)
     # X = add_intercept(X)
-    x_prime = center(x_prime)
+    #x_prime = center(x_prime)
     # x_prime = add_intercept(x_prime)
     return X, x_prime, y
 
+
+# def clean_communities():
+#     num_sens = 18
+#     # Data Cleaning and Import
+#     df = pd.read_csv('dataset/communities.csv')
+#     df = df.fillna(0)
+#
+#     # sensitive variables are just racial distributions in the population and police force as well as foreign status
+#     # median income and pct of illegal immigrants / related variables are not labeled sensitive
+#     sens_features = [3, 4, 5, 6, 22, 23, 24, 25, 26, 27, 61, 62, 92, 105, 106, 107, 108, 109]
+#     df_sens = df.iloc[:, sens_features[0:num_sens]]
+#     y = df['ViolentCrimesPerPop']
+#     q_y = np.percentile(y, 70)
+#     # convert y's to binary predictions on whether the neighborhood is
+#     # especially violent
+#     y = [np.round((1 + np.sign(s - q_y)) / 2) for s in y]
+#     X = df.iloc[:, 0:122]
+#     X_prime = df_sens
+#     return X, X_prime, y
 
 
 # num_sens in 1:17
