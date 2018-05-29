@@ -1,0 +1,322 @@
+sensitive features: ['racepctblack', 'racePctWhite', 'racePctAsian', 'racePctHisp', 'whitePerCap', 'blackPerCap', 'indianPerCap', 'AsianPerCap', 'OtherPerCap', 'HispPerCap', 'PctSpeakEnglOnly', 'PctNotSpeakEnglWell', 'PctForeignBorn', 'RacialMatchCommPol', 'PctPolicWhite', 'PctPolicBlack', 'PctPolicHisp', 'PctPolicAsian']
+there are 18 sensitive features including derivative features
+Invoked Parameters: number of sensitive attributes = 18, dataset = communities
+logistic regression audit:
+accuracy: 0.874623871615
+group size: 0.221664994985, gamma-unfairness: 0.030368213073, FP-disparity: 0.13700049065
+('subgroup_coefficients: [  2.55021725e-04   1.01943884e-04  -3.13736684e-04   4.05399724e-06\n   6.99557035e-06  -3.21268878e-05   3.96389303e-05   4.64758928e-04\n   2.94675749e-05   2.27334820e-05  -2.60595195e-04   1.42868590e-04\n  -1.37789794e-04   9.83211635e-06  -2.63048772e-05   4.85543280e-04\n   3.89360777e-04  -7.77259565e-05]',)
+sensitive attributes: ['PctPolicWhite', 'racepctblack', 'RacialMatchCommPol', 'AsianPerCap', 'whitePerCap', 'indianPerCap', 'racePctHisp', 'PctPolicBlack', 'PctPolicAsian', 'HispPerCap', 'racePctWhite', 'PctSpeakEnglOnly', 'PctForeignBorn', 'OtherPerCap', 'blackPerCap', 'PctPolicHisp', 'PctNotSpeakEnglWell', 'racePctAsian']
+sensitive attributes with the largest group coefficients: Index([u'PctPolicHisp', u'PctPolicBlack', u'PctNotSpeakEnglWell'], dtype='object')
+coefficients of top sensitive attributes: [ 0.00048554  0.00046476  0.00038936]
+SVM audit:
+accuracy: 0.860581745236
+group size: 0.493981945838, gamma-unfairness: 0.0259069199093, FP-disparity: 0.0524450744153
+('subgroup_coefficients: [ -1.25908208e-04  -6.59150372e-05   1.66883341e-04  -1.64964786e-05\n  -1.68558574e-05   1.34448594e-05   2.86348190e-05  -2.57786739e-04\n  -4.76287846e-05  -2.09923086e-05   2.79989385e-04   1.21467227e-05\n   2.34387598e-04  -6.28016815e-06   5.54445899e-06  -3.86358825e-04\n  -4.22717913e-04   7.88301884e-05]',)
+sensitive attributes: ['PctPolicWhite', 'racepctblack', 'RacialMatchCommPol', 'AsianPerCap', 'whitePerCap', 'indianPerCap', 'racePctHisp', 'PctPolicBlack', 'PctPolicAsian', 'HispPerCap', 'racePctWhite', 'PctSpeakEnglOnly', 'PctForeignBorn', 'OtherPerCap', 'blackPerCap', 'PctPolicHisp', 'PctNotSpeakEnglWell', 'racePctAsian']
+sensitive attributes with the largest group coefficients: Index([u'PctNotSpeakEnglWell', u'PctPolicHisp', u'racePctWhite'], dtype='object')
+coefficients of top sensitive attributes: [-0.00042272 -0.00038636  0.00027999]
+nearest neighbors audit:
+accuracy: 0.907723169509
+group size: 0.261283851555, gamma-unfairness: 0.0190568160897, FP-disparity: 0.0729352999669
+('subgroup_coefficients: [ -1.42095770e-04   2.35033825e-05   1.60768541e-04  -2.67824911e-05\n   6.89592154e-06  -1.16610797e-05  -2.06329707e-05  -7.31082152e-05\n  -1.25039537e-05  -1.53513447e-05  -1.90906661e-04   1.58676747e-04\n  -1.10875190e-04   1.31307784e-05  -5.16636026e-06   2.44789853e-04\n   2.87912581e-04   1.15893157e-05]',)
+sensitive attributes: ['PctPolicWhite', 'racepctblack', 'RacialMatchCommPol', 'AsianPerCap', 'whitePerCap', 'indianPerCap', 'racePctHisp', 'PctPolicBlack', 'PctPolicAsian', 'HispPerCap', 'racePctWhite', 'PctSpeakEnglOnly', 'PctForeignBorn', 'OtherPerCap', 'blackPerCap', 'PctPolicHisp', 'PctNotSpeakEnglWell', 'racePctAsian']
+sensitive attributes with the largest group coefficients: Index([u'PctNotSpeakEnglWell', u'PctPolicHisp', u'racePctWhite'], dtype='object')
+coefficients of top sensitive attributes: [ 0.00028791  0.00024479 -0.00019091]
+sensitive features: ['racepctblack', 'racePctWhite', 'racePctAsian', 'racePctHisp', 'whitePerCap', 'blackPerCap', 'indianPerCap', 'AsianPerCap', 'OtherPerCap', 'HispPerCap', 'PctSpeakEnglOnly', 'PctNotSpeakEnglWell', 'PctForeignBorn', 'RacialMatchCommPol', 'PctPolicWhite', 'PctPolicBlack', 'PctPolicHisp', 'PctPolicAsian']
+there are 18 sensitive features including derivative features
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+accuracy: 0.80591775326
+group size: 0.305416248746, gamma-unfairness: 0.00931071030242, FP-disparity: 0.0304853141921
+('subgroup_coefficients: [  2.57404631e-04   9.94836087e-07  -1.83682034e-04   3.92640604e-06\n  -3.43285160e-06  -4.54086572e-06   1.32911608e-05  -4.95888172e-05\n   1.05487385e-05  -4.31941999e-06  -6.47527881e-06   3.73374583e-06\n  -1.98017041e-06   6.34830591e-06  -7.50215915e-06  -6.95482535e-05\n  -1.64228735e-05   1.74807929e-05]',)
+sensitive attributes: ['PctPolicWhite', 'racepctblack', 'RacialMatchCommPol', 'AsianPerCap', 'whitePerCap', 'indianPerCap', 'racePctHisp', 'PctPolicBlack', 'PctPolicAsian', 'HispPerCap', 'racePctWhite', 'PctSpeakEnglOnly', 'PctForeignBorn', 'OtherPerCap', 'blackPerCap', 'PctPolicHisp', 'PctNotSpeakEnglWell', 'racePctAsian']
+sensitive attributes with the largest group coefficients: Index([u'PctPolicWhite', u'RacialMatchCommPol', u'PctPolicHisp'], dtype='object')
+coefficients of top sensitive attributes: [  2.57404631e-04  -1.83682034e-04  -6.95482535e-05]
+there are 11 sensitive features including derivative features
+Invoked Parameters: number of sensitive attributes = 11, dataset = lawschool
+logistic regression audit:
+accuracy: 0.90125
+group size: 0.0645192307692, gamma-unfairness: 0.0108119401858, FP-disparity: 0.167577016293
+('subgroup_coefficients: [ -9.57481010e-06  -7.13594141e-06  -1.46226461e-06  -5.49366761e-07\n   6.19737875e-07   5.74465242e-06  -7.92521075e-06  -1.87609665e-06\n   1.51602438e-05   1.33893699e-06   4.26822567e-06]',)
+sensitive attributes: ['race1', 'race3', 'gender', 'age', 'fam_inc', 'race2', 'race5', 'race6', 'race7', 'race8', 'race4']
+sensitive attributes with the largest group coefficients: Index([u'race7', u'race1', u'race5'], dtype='object')
+coefficients of top sensitive attributes: [  1.51602438e-05  -9.57481010e-06  -7.92521075e-06]
+SVM audit:
+accuracy: 0.904951923077
+group size: 0.0418269230769, gamma-unfairness: 0.0101038486699, FP-disparity: 0.241563278544
+('subgroup_coefficients: [  8.48167984e-06   1.04689030e-05   1.43490373e-06   4.75153410e-07\n  -1.04912665e-06  -6.23052319e-06   5.56933974e-06  -7.93522432e-07\n  -1.23241064e-05  -1.49352669e-06  -3.67824392e-06]',)
+sensitive attributes: ['race1', 'race3', 'gender', 'age', 'fam_inc', 'race2', 'race5', 'race6', 'race7', 'race8', 'race4']
+sensitive attributes with the largest group coefficients: Index([u'race7', u'race3', u'race1'], dtype='object')
+coefficients of top sensitive attributes: [ -1.23241064e-05   1.04689030e-05   8.48167984e-06]
+nearest neighbors audit:
+accuracy: 0.926875
+group size: 0.0412019230769, gamma-unfairness: 0.00823235012916, FP-disparity: 0.1998049973
+('subgroup_coefficients: [  3.34527055e-06   8.69235348e-06   9.70411575e-07   2.77889992e-07\n  -1.47311442e-07  -3.78748027e-06   4.25581895e-06   3.90455056e-06\n  -1.01848471e-05  -3.07535095e-06  -3.15031522e-06]',)
+sensitive attributes: ['race1', 'race3', 'gender', 'age', 'fam_inc', 'race2', 'race5', 'race6', 'race7', 'race8', 'race4']
+sensitive attributes with the largest group coefficients: Index([u'race7', u'race3', u'race5'], dtype='object')
+coefficients of top sensitive attributes: [ -1.01848471e-05   8.69235348e-06   4.25581895e-06]
+there are 11 sensitive features including derivative features
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+accuracy: 0.891105769231
+group size: 0.0508653846154, gamma-unfairness: 0.00065494062196, FP-disparity: 0.0128759592975
+('subgroup_coefficients: [  6.64343667e+05   6.64343667e+05  -5.56836839e-08  -2.00893353e-07\n  -1.84718426e+02   6.64343667e+05   6.64343667e+05   6.64343667e+05\n   6.64343667e+05   6.64343667e+05   6.64343667e+05]',)
+sensitive attributes: ['race1', 'race3', 'gender', 'age', 'fam_inc', 'race2', 'race5', 'race6', 'race7', 'race8', 'race4']
+sensitive attributes with the largest group coefficients: Index([u'race5', u'race6', u'race8'], dtype='object')
+coefficients of top sensitive attributes: [ 664343.66729986  664343.66729765  664343.66729698]
+sensitive features: ['age', 'race', 'sex']
+there are 7 sensitive features including derivative features
+Invoked Parameters: number of sensitive attributes = 7, dataset = adult
+logistic regression audit:
+accuracy: 0.808415841584
+group size: 0.303465346535, gamma-unfairness: 0.040207439971, FP-disparity: 0.132494337262
+('subgroup_coefficients: [  1.61507222e-04  -6.81951222e-05  -4.27594825e-05   2.53311020e-05\n   1.05730954e-04  -2.01074513e-05   2.93274924e-06]',)
+sensitive attributes: ['sex', 'race.4', 'race.0', 'race.3', 'race.2', 'race.1', 'age']
+sensitive attributes with the largest group coefficients: Index([u'sex', u'race.2', u'race.4'], dtype='object')
+coefficients of top sensitive attributes: [  1.61507222e-04   1.05730954e-04  -6.81951222e-05]
+SVM audit:
+accuracy: 1.0
+group size: nan, gamma-unfairness: 0.0, FP-disparity: 0.0
+('subgroup_coefficients: [ 0.  0.  0.  0.  0.  0.  0.]',)
+sensitive attributes: ['sex', 'race.4', 'race.0', 'race.3', 'race.2', 'race.1', 'age']
+sensitive attributes with the largest group coefficients: Index([u'age', u'race.1', u'race.2'], dtype='object')
+coefficients of top sensitive attributes: [ 0.  0.  0.]
+nearest neighbors audit:
+accuracy: 0.785148514851
+group size: 0.281683168317, gamma-unfairness: 0.0118380123443, FP-disparity: 0.0420259840696
+('subgroup_coefficients: [  3.35297846e-06   2.25718193e-06  -3.28071129e-05   1.26180422e-05\n   1.50532933e-05   2.87859542e-06  -1.06614875e-06]',)
+sensitive attributes: ['sex', 'race.4', 'race.0', 'race.3', 'race.2', 'race.1', 'age']
+sensitive attributes with the largest group coefficients: Index([u'race.0', u'race.2', u'race.3'], dtype='object')
+coefficients of top sensitive attributes: [ -3.28071129e-05   1.50532933e-05   1.26180422e-05]
+sensitive features: ['age', 'race', 'sex']
+there are 7 sensitive features including derivative features
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+accuracy: 0.792574257426
+group size: 0.0277227722772, gamma-unfairness: 0.00109313210806, FP-disparity: 0.0394308367549
+('subgroup_coefficients: [  7.17750252e-07  -6.62989877e+08  -6.62989877e+08  -6.62989877e+08\n  -6.62989877e+08  -6.62989877e+08   0.00000000e+00]',)
+sensitive attributes: ['sex', 'race.4', 'race.0', 'race.3', 'race.2', 'race.1', 'age']
+sensitive attributes with the largest group coefficients: Index([u'race.4', u'race.1', u'race.2'], dtype='object')
+coefficients of top sensitive attributes: [ -6.62989877e+08  -6.62989877e+08  -6.62989877e+08]
+sensitive features: ['sex', 'age', 'romantic', 'Dalc', 'Walc']
+there are 5 sensitive features including derivative features
+Invoked Parameters: number of sensitive attributes = 5, dataset = student
+logistic regression audit:
+accuracy: 0.726582278481
+group size: 0.237974683544, gamma-unfairness: 0.0211787123996, FP-disparity: 0.0889956531686
+('subgroup_coefficients: [ -4.22444645e-04  -7.30887057e-05  -2.56395096e-04   2.35447027e-04\n   1.21587998e-04]',)
+sensitive attributes: ['sex', 'Dalc', 'romantic', 'Walc', 'age']
+sensitive attributes with the largest group coefficients: Index([u'sex', u'romantic', u'Walc'], dtype='object')
+coefficients of top sensitive attributes: [-0.00042244 -0.0002564   0.00023545]
+SVM audit:
+accuracy: 0.80253164557
+group size: 0.222784810127, gamma-unfairness: 0.0344630461413, FP-disparity: 0.154692082111
+('subgroup_coefficients: [  6.81272019e-05   1.91383713e-05  -9.01646579e-05  -2.17504622e-04\n  -2.24775740e-04]',)
+sensitive attributes: ['sex', 'Dalc', 'romantic', 'Walc', 'age']
+sensitive attributes with the largest group coefficients: Index([u'age', u'Walc', u'romantic'], dtype='object')
+coefficients of top sensitive attributes: [ -2.24775740e-04  -2.17504622e-04  -9.01646579e-05]
+nearest neighbors audit:
+accuracy: 0.792405063291
+group size: 0.270886075949, gamma-unfairness: 0.029399755002, FP-disparity: 0.108531805849
+('subgroup_coefficients: [ -1.41425439e-04  -5.76158057e-05   8.83349981e-06   1.95300808e-04\n   2.00860574e-04]',)
+sensitive attributes: ['sex', 'Dalc', 'romantic', 'Walc', 'age']
+sensitive attributes with the largest group coefficients: Index([u'age', u'Walc', u'sex'], dtype='object')
+coefficients of top sensitive attributes: [ 0.00020086  0.0001953  -0.00014143]
+sensitive features: ['sex', 'age', 'romantic', 'Dalc', 'Walc']
+there are 5 sensitive features including derivative features
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+accuracy: 0.73164556962
+group size: 0.311392405063, gamma-unfairness: 0.000775826868109, FP-disparity: 0.00249147652767
+('subgroup_coefficients: [  7.72918503e-06   0.00000000e+00  -1.76138329e-05   0.00000000e+00\n   0.00000000e+00]',)
+sensitive attributes: ['sex', 'Dalc', 'romantic', 'Walc', 'age']
+sensitive attributes with the largest group coefficients: Index([u'romantic', u'sex', u'age'], dtype='object')
+coefficients of top sensitive attributes: [ -1.76138329e-05   7.72918503e-06   0.00000000e+00]
