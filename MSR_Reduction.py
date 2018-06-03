@@ -4,6 +4,7 @@ import numpy as np
 from sklearn import linear_model
 import random
 import Reg_Oracle_Class
+from Audit import *
 
 
 # Helper Functions
@@ -133,9 +134,10 @@ def MSR_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
         max_disp.append(np.max(unfairness))
         acc = evaluate_classifier(h, X, y)
         if printflag:
-            print('fp_disparity in each group: {}'.format(unfairness),)
-            print('max fp disparity in each group: {}'.format(np.max(unfairness)))
-            print('error of h: {}'.format(1.0 - acc))
+            new_predictions = h.predict(X)
+            audit(new_predictions, X, X_prime_cts, y)
+            print('Marginal FP disparity in each group: {}'.format(unfairness),)
+            print('Max Marginal FP disparity: {}'.format(np.max(unfairness)))
         A = h.predict(X)
         iteration += 1
     # print the decisions of the final classifier
@@ -149,15 +151,14 @@ def MSR_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
 if __name__ == "__main__":
     random.seed(1)
     # get command line arguments
-    num_sens, dataset, max_iters = sys.argv[1:]
-    num_sens = int(num_sens)
+    dataset, max_iters = sys.argv[1:]
     dataset = str(dataset)
     max_iters = float(max_iters)
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
-    clean_the_dataset = getattr(clean_data_msr, f_name)
-    X, X_prime, y = clean_the_dataset(num_sens)
-    X, X_prime_cts, y = clean_the_dataset(num_sens)
+    clean_the_dataset = getattr(clean_data, f_name)
+    X, X_prime, y = clean_the_dataset()
+    X, X_prime_cts, y = clean_the_dataset()
     n = X.shape[0]
     # threshold sensitive features by average value
     sens_means = np.mean(X_prime)
@@ -166,6 +167,6 @@ if __name__ == "__main__":
         X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
         X.loc[(X[col] <= sens_means[col]), col] = 0
         X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-    print(MSR_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=False))
+    print(MSR_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=True))
 
 

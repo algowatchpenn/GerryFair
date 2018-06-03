@@ -4,7 +4,7 @@ from MSR_Reduction import *
 from sklearn import svm
 from sklearn import neighbors
 
-# USAGE: python Audit.py 18 communities 100000
+# USAGE: python Audit.py all 50
 
 # Helper Functions
 
@@ -33,18 +33,65 @@ def audit(predictions, X, X_prime, y):
     print('coefficients of top sensitive attributes: {}'.format(group_coefs[top_indices]))
 
 
-
 if __name__ == "__main__":
-
     random.seed(1)
     ds = ['communities', 'lawschool', 'adult', 'student']
     dataset, max_iters = sys.argv[1:]
     dataset = str(dataset)
     max_iters = int(max_iters)
 
+    if dataset == 'all':
+        for dataset in ds:
+            # Data Cleaning and Import
+            f_name = 'clean_{}'.format(dataset)
+            clean_the_dataset = getattr(clean_data, f_name)
+            X, X_prime, y = clean_the_dataset()
 
-if dataset == 'all':
-    for dataset in ds:
+            # print out the invoked parameters
+            num_sens = X_prime.shape[1]
+            print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
+
+            # logistic regression
+            model = linear_model.LogisticRegression()
+            model.fit(X, y)
+            yhat = list(model.predict(X))
+            print('logistic regression audit:')
+            audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+
+            # shallow neural network
+            # model = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(3, 2), random_state=1)
+            # model.fit(X,y)
+            # yhat = list(model.predict(X))
+            # print('multilayer perceptron (3, 2) audit:')
+            # audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+
+            # support vector machine
+            model = svm.SVC()
+            model.fit(X, y)
+            yhat = list(model.predict(X))
+            print('SVM audit:')
+            audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+
+            # nearest neighbor
+            model = neighbors.KNeighborsClassifier(3)
+            model.fit(X, y)
+            yhat = list(model.predict(X))
+            print('nearest neighbors audit:')
+            audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+
+            # MSR reduction with Reg Oracle
+            X, X_prime_cts, y = clean_the_dataset()
+            n = X.shape[0]
+            # threshold sensitive features by average value
+            sens_means = np.mean(X_prime)
+            for col in X_prime.columns:
+                X.loc[(X[col] > sens_means[col]), col] = 1
+                X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
+                X.loc[(X[col] <= sens_means[col]), col] = 0
+                X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
+            yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
+            audit(yhat, X, X_prime, y)
+    else:
         # Data Cleaning and Import
         f_name = 'clean_{}'.format(dataset)
         clean_the_dataset = getattr(clean_data, f_name)
@@ -94,53 +141,3 @@ if dataset == 'all':
             X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
         yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
         audit(yhat, X, X_prime, y)
-else:
-    # Data Cleaning and Import
-    f_name = 'clean_{}'.format(dataset)
-    clean_the_dataset = getattr(clean_data, f_name)
-    X, X_prime, y = clean_the_dataset()
-
-    # print out the invoked parameters
-    num_sens = X_prime.shape[1]
-    print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
-
-    # logistic regression
-    model = linear_model.LogisticRegression()
-    model.fit(X, y)
-    yhat = list(model.predict(X))
-    print('logistic regression audit:')
-    audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-    # shallow neural network
-    # model = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(3, 2), random_state=1)
-    # model.fit(X,y)
-    # yhat = list(model.predict(X))
-    # print('multilayer perceptron (3, 2) audit:')
-    # audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-    # support vector machine
-    model = svm.SVC()
-    model.fit(X, y)
-    yhat = list(model.predict(X))
-    print('SVM audit:')
-    audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-    # nearest neighbor
-    model = neighbors.KNeighborsClassifier(3)
-    model.fit(X, y)
-    yhat = list(model.predict(X))
-    print('nearest neighbors audit:')
-    audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-    # MSR reduction with Reg Oracle
-    X, X_prime_cts, y = clean_the_dataset()
-    n = X.shape[0]
-    # threshold sensitive features by average value
-    sens_means = np.mean(X_prime)
-    for col in X_prime.columns:
-        X.loc[(X[col] > sens_means[col]), col] = 1
-        X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
-        X.loc[(X[col] <= sens_means[col]), col] = 0
-        X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-    yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
-    audit(yhat, X, X_prime, y)
