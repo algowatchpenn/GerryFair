@@ -1,11 +1,6 @@
-import sys
-import clean_data
-import numpy as np
-from sklearn import linear_model
-import random
-import Reg_Oracle_Class
+from Reg_Oracle_Fict import *
 from Audit import *
-
+import sys
 
 # Helper Functions
 # -----------------------
@@ -104,7 +99,8 @@ def MSR_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
                                      and y[i] == 0 for i in range(len(y))]) for key in immutable_keys}
 
     # only focus on groups with non-trivial mass (speed up convergence)
-    alpha = .01
+    # alpha = 0 includes all groups
+    alpha = 0
     key_alpha = [key for key in prob_0.keys() if prob_0[key] > alpha]
 
     lambda_0 = {el: 0 for el in key_alpha}
@@ -136,16 +132,14 @@ def MSR_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
         if printflag:
             new_predictions = h.predict(X)
             audit(new_predictions, X, X_prime_cts, y)
-            print('Marginal FP disparity in each group: {}'.format(unfairness),)
+            print('Marginal FP disparity in each group: {}'.format(unfairness))
             print('Max Marginal FP disparity: {}'.format(np.max(unfairness)))
-        A = h.predict(X)
+            sys.stdout.flush()
         iteration += 1
     # print the decisions of the final classifier
-    h = hypothesis[-1]
-    final_preds = h.predict(X)
     if printflag:
-        print('decisions on the dataset of the final fair classifier: {}'.format(final_preds))
-    return final_preds
+        print('decisions on the dataset of the final fair classifier: {}'.format(h.predict(X)))
+    return h.predict(X)
 
 
 if __name__ == "__main__":
@@ -167,6 +161,6 @@ if __name__ == "__main__":
         X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
         X.loc[(X[col] <= sens_means[col]), col] = 0
         X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-    print(MSR_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=True))
+    MSR_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=True)
 
 

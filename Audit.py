@@ -4,6 +4,8 @@ from MSR_Reduction import *
 from sklearn import svm
 from sklearn import neighbors
 
+
+
 # USAGE: python Audit.py all 50
 
 # Helper Functions
@@ -32,6 +34,59 @@ def audit(predictions, X, X_prime, y):
     print('sensitive attributes with the largest group coefficients: {}'.format(X_prime.columns[top_indices]))
     print('coefficients of top sensitive attributes: {}'.format(group_coefs[top_indices]))
 
+def get_group(A, X, X_sens, y_g, FP):
+    """Given decisions on X, sensitive attributes, labels, and FP rate audit wrt
+        to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
+    """
+
+    A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
+    X_0 = pd.DataFrame([X_sens.iloc[u, :]
+                        for u, s in enumerate(y_g) if s == 0])
+    m = len(A_0)
+    n = float(len(y_g))
+    cost_0 = [0.0] * m
+    cost_1 = -1.0 / n * (FP - A_0)
+    reg0 = linear_model.LinearRegression()
+    reg0.fit(X_0, cost_0)
+    reg1 = linear_model.LinearRegression()
+    reg1.fit(X_0, cost_1)
+    func = Reg_Oracle_Class.RegOracle(reg0, reg1)
+    group_members_0 = func.predict(X_0)
+    err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
+                         for i in range(len(A_0))])
+    # get the false positive rate in group
+    if sum(group_members_0) == 0:
+        fp_group_rate = 0
+    else:
+        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
+    g_size_0 = np.sum(group_members_0) * 1.0 / n
+    fp_disp = np.abs(fp_group_rate - FP)
+    fp_disp_w = fp_disp * g_size_0
+
+    # negation
+    cost_0_neg = [0.0] * m
+    cost_1_neg = -1.0 / n * (A_0-FP)
+    reg0_neg = linear_model.LinearRegression()
+    reg0_neg.fit(X_0, cost_0_neg)
+    reg1_neg = linear_model.LinearRegression()
+    reg1_neg.fit(X_0, cost_1_neg)
+    func_neg = Reg_Oracle_Class.RegOracle(reg0_neg, reg1_neg)
+    group_members_0_neg = func_neg.predict(X_0)
+    err_group_neg = np.mean(
+        [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
+    if sum(group_members_0_neg) == 0:
+        fp_group_rate_neg = 0
+    else:
+        fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+    g_size_0_neg = np.sum(group_members_0_neg) * 1.0 / n
+    fp_disp_neg = np.abs(fp_group_rate_neg - FP)
+    fp_disp_w_neg = fp_disp_neg*g_size_0_neg
+
+    # return group
+    if fp_disp_w_neg > fp_disp_w:
+        return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
+    else:
+        return [func, fp_disp_w, fp_disp, err_group, 1]
 
 if __name__ == "__main__":
     random.seed(1)
@@ -95,42 +150,43 @@ if __name__ == "__main__":
         # Data Cleaning and Import
         f_name = 'clean_{}'.format(dataset)
         clean_the_dataset = getattr(clean_data, f_name)
-        X, X_prime, y = clean_the_dataset()
-
-        # print out the invoked parameters
-        num_sens = X_prime.shape[1]
-        print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
-
-        # logistic regression
-        model = linear_model.LogisticRegression()
-        model.fit(X, y)
-        yhat = list(model.predict(X))
-        print('logistic regression audit:')
-        audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-        # shallow neural network
-        # model = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(3, 2), random_state=1)
-        # model.fit(X,y)
+        # X, X_prime, y = clean_the_dataset()
+        #
+        # # print out the invoked parameters
+        # num_sens = X_prime.shape[1]
+        # print('Invoked Parameters: number of sensitive attributes = {}, dataset = {}'.format(num_sens, dataset))
+        #
+        # # logistic regression
+        # model = linear_model.LogisticRegression()
+        # model.fit(X, y)
         # yhat = list(model.predict(X))
-        # print('multilayer perceptron (3, 2) audit:')
+        # print('logistic regression audit:')
         # audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-        # support vector machine
-        model = svm.SVC()
-        model.fit(X, y)
-        yhat = list(model.predict(X))
-        print('SVM audit:')
-        audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
-
-        # nearest neighbor
-        model = neighbors.KNeighborsClassifier(3)
-        model.fit(X, y)
-        yhat = list(model.predict(X))
-        print('nearest neighbors audit:')
-        audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+        #
+        # # shallow neural network
+        # # model = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(3, 2), random_state=1)
+        # # model.fit(X,y)
+        # # yhat = list(model.predict(X))
+        # # print('multilayer perceptron (3, 2) audit:')
+        # # audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+        #
+        # # support vector machine
+        # model = svm.SVC()
+        # model.fit(X, y)
+        # yhat = list(model.predict(X))
+        # print('SVM audit:')
+        # audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
+        #
+        # # nearest neighbor
+        # model = neighbors.KNeighborsClassifier(3)
+        # model.fit(X, y)
+        # yhat = list(model.predict(X))
+        # print('nearest neighbors audit:')
+        # audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
 
         # MSR reduction with Reg Oracle
         X, X_prime_cts, y = clean_the_dataset()
+        X_prime = X_prime_cts.iloc[:,:]
         n = X.shape[0]
         # threshold sensitive features by average value
         sens_means = np.mean(X_prime)
@@ -139,5 +195,5 @@ if __name__ == "__main__":
             X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
             X.loc[(X[col] <= sens_means[col]), col] = 0
             X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-        yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, False)
-        audit(yhat, X, X_prime, y)
+        yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, True)
+
