@@ -101,7 +101,7 @@ def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
     n = float(len(y))
     g_weight_0 = np.sum(g_members)*(1.0/float(m))
     for t in range(m):
-        new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * g_members[t] * (g_weight_0 - 1)
+        new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight_0 - g_members[t])
         if np.abs(fp_disp) < gamma:
             if t == 0:
                 print('barrier')
