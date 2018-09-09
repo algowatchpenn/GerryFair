@@ -12,12 +12,12 @@ python packages: pandas, numpy, sklearn
 ## Running the tests
 
 To learn a fair classifier on a dataset in the dataset folder subject to gamma unfairness:
-```python
+```
 python Reg_Oracle_Fict.py C printflag heatmapflag heatmap_iter max_iterations gamma_unfairness
 ```
 e.g. 
-```python
-Reg_Oracle_Fict.py 10 True False 1 communities  10 .01
+```
+python Reg_Oracle_Fict.py 10 True False 1 communities  10 .01
 ```
 arguments: 
 * C: bound on the max L1 norm of the dual variables
