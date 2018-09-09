@@ -1,4 +1,4 @@
-# Fairness Gerrymandering
+# Rich Subgroup Fairness
 
 This repository contains python code for both 
 * learning fair classifiers subject to the fairness definitions in https://arxiv.org/abs/1711.05144
