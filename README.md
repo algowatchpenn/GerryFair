@@ -37,7 +37,38 @@ python Audit.py num_sensitive_feautures dataset max_iterations
 ### Adding a dataset
 Let's add a dataset `credit_scores`. The actual dataset
 should be saved in a standard csv format where rows correspond to observations, and with the columns named.
-This file should be called `dataset/credit_scores.csv`. These columns can include the target variable `y`. The second file, should be saved as `dataset/credit_scores_protected.csv`, and should have the same column names as `credit_scores.csv` except for the target variable, and only one row. Each entry should be 0 or 1, depending on whether that column is designated as a protected attribute. After these csv files are saved in the dataset folder, we create a function in `clean_data.py` that preprocesses the dataset to be fed into the algorithm in `Reg_Oracle_Fict.py`.
+This file should be called `dataset/credit_scores.csv`. These columns can include the target variable `y`. The second file, should be saved as `dataset/credit_scores_protected.csv`, and should have the same column names as `credit_scores.csv` except for the target variable, and only one row. Each entry should be 0 or 1, depending on whether that column is designated as a protected attribute. After these csv files are saved in the dataset folder, we create a function in `clean_data.py` that preprocesses the dataset to be fed into the algorithm in `Reg_Oracle_Fict.py`. The function should be called clean_credit_scores(). Here is an example for the communities dataset: 
+```python
+def clean_communities():
+    """Clean communities & crime data set."""
+    # Data Cleaning and Import
+    df = pd.read_csv('dataset/communities.csv')
+    df = df.fillna(0)
+    y = df['ViolentCrimesPerPop']
+    q_y = np.percentile(y, 70)
+    # convert y's to binary predictions on whether the neighborhood is
+    # especially violent
+    y = [np.round((1 + np.sign(s - q_y)) / 2) for s in y]
+    X = df.iloc[:, 0:122]
+    # hot code categorical variables
+    sens_df = pd.read_csv('dataset/communities_protected.csv')
+    sens_cols = [str(c) for c in sens_df.columns if sens_df[c][0] == 1]
+    print('sensitive features: {}'.format(sens_cols))
+    sens_dict = {c: 1 if c in sens_cols else 0 for c in df.columns}
+    df, sens_dict = one_hot_code(df, sens_dict)
+    sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
+    print('there are {} sensitive features including derivative features'.format(len(sens_names)))
+    x_prime = df[sens_names]
+    X = center(X)
+    # X = add_intercept(X)
+    x_prime = center(x_prime)
+    # x_prime = add_intercept(x_prime)
+    return X, x_prime, pd.Series(y)
+   ```
+   The clean_credit_scores() function reads in the two csv files and returns 3 pandas dataframes: X, X', y. 
+   X is the dataframe of all attributes, with all categorical variables one-hot encoded. X' is the dataframe 
+   of only the sensitive variables, and y is the target variable. The clean function can also perform other pre-processing     such as centering the columns (`center()`) or adding an intercept (`add_intercept`).
+
 
 ## License
 Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
