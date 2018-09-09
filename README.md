@@ -67,7 +67,7 @@ def clean_communities():
    ```
    The clean_credit_scores() function reads in the two csv files and returns 3 pandas dataframes: X, X', y. 
    X is the dataframe of all attributes, with all categorical variables one-hot encoded, and all missing or NA data removed or imputed. X' is the dataframe 
-   of only the sensitive variables, and y is the target variable. The clean function can also perform other pre-processing     such as centering the columns (`center()`) or adding an intercept (`add_intercept`).
+   of only the sensitive variables, and y is the target variable. The clean function can also perform other pre-processing     such as centering the columns (`center()`) or adding an intercept (`add_intercept`). Once the clean function has been added, the dataset can now be fed in as a command line argument for `Reg_Oracle_Fict.py`.
 
 
 ## License
