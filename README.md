@@ -3,7 +3,7 @@
 This repository contains python code for both 
 * learning fair classifiers subject to the fairness definitions in https://arxiv.org/abs/1711.05144
 * auditing standard classifiers from sklearn for unfairness
-* fairness sensitive datasets for experiments
+* fairness sensitive datasets for experiments https://arxiv.org/abs/1808.08166
 
 ### Prerequisites
 
@@ -29,7 +29,7 @@ python Audit.py num_sensitive_feautures dataset max_iterations
 ```
 ## Datasets
 #### communities: http://archive.ics.uci.edu/ml/datasets/communities+and+crime
-#### lawschool: 
+#### lawschool: https://eric.ed.gov/?id=ED469370
 #### adult: https://archive.ics.uci.edu/ml/datasets/adult
 #### student: https://archive.ics.uci.edu/ml/datasets/student+performance (math grades)
 
