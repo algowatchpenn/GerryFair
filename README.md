@@ -13,8 +13,18 @@ python packages: pandas, numpy, sklearn
 
 To learn a fair classifier on a dataset in the dataset folder subject to gamma unfairness:
 ```python
-python Reg_Oracle_Fict.py C num_sensitive_features printflag dataset reg_oracle max_iterations gamma_unfairness 'gamma'
+python Reg_Oracle_Fict.py C printflag, heatmapflag, max_iterations gamma_unfairness
 ```
+arguments: 
+* C: bound on the max L1 norm of the dual variables
+* printflag: flag True or False determines whether output is printed
+* heatmapflag: flag True or False determines whether heatmaps are generated 
+* dataset: name of the dataset (communities, lawschool, adult, student)
+* max_iterations: number of iterations to terminate after
+* gamma_unfairness: approximate gamma disparity allowed in subgroups
+
+
+
 To audit for gamma unfairness on a dataset:
 ```python
 python Audit.py num_sensitive_feautures dataset max_iterations 
