@@ -79,7 +79,7 @@ def evaluate_classifier(h, X, y):
     return acc
 
 
-def MSR_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
+def marginal_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
     # initialize parameters
     iteration = 1
     hypothesis = []
@@ -161,6 +161,6 @@ if __name__ == "__main__":
         X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
         X.loc[(X[col] <= sens_means[col]), col] = 0
         X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-    MSR_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=True)
+    marginal_preds(X, X_prime, X_prime_cts, y, max_iters=max_iters, printflag=True)
 
 

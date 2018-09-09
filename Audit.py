@@ -1,6 +1,6 @@
 from sklearn.neural_network import *
 from Reg_Oracle_Fict import *
-from MSR_Reduction import *
+from Marginal_Reduction import *
 from sklearn import svm
 from sklearn import neighbors
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
             print('nearest neighbors audit:')
             audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
 
-            # MSR reduction with Reg Oracle
+            # Marginal reduction with Reg Oracle
             X, X_prime_cts, y = clean_the_dataset()
             n = X.shape[0]
             # threshold sensitive features by average value
@@ -192,7 +192,7 @@ if __name__ == "__main__":
         print('nearest neighbors audit:')
         audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
 
-        # MSR reduction with Reg Oracle
+        # Marginal reduction with Reg Oracle
         X, X_prime_cts, y = clean_the_dataset()
         X_prime = X_prime_cts.iloc[:,:]
         n = X.shape[0]
@@ -203,5 +203,5 @@ if __name__ == "__main__":
             X_prime.loc[(X_prime[col] > sens_means[col]), col] = 1
             X.loc[(X[col] <= sens_means[col]), col] = 0
             X_prime.loc[(X_prime[col] <= sens_means[col]), col] = 0
-        yhat = MSR_preds(X, X_prime, X_prime_cts, y, max_iters, True)
+        yhat = marginal_preds(X, X_prime, X_prime_cts, y, max_iters, True)
 
