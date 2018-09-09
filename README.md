@@ -71,8 +71,8 @@ def clean_communities():
 
 
 ## License
-Maintained by: Seth Neel (sethneel@wharton.upenn.edu)
-Property of: Michael Kearns, Seth Neel, Aaron Roth, Z. Steven Wu.
+* Maintained by: Seth Neel (sethneel@wharton.upenn.edu)
+* Property of: Michael Kearns, Seth Neel, Aaron Roth, Z. Steven Wu.
 
 ## Acknowledgments
 
