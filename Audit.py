@@ -13,6 +13,9 @@ from sklearn import neighbors
 
 def get_fp(preds, y):
     """Return the fp rate of preds wrt to true labels y."""
+    # print('my FP ', np.mean(preds[y == 0]))
+
+    # return np.mean(preds[y == 0])
     return np.mean([p for i,p in enumerate(preds) if y[i] == 0])
 
 
@@ -27,12 +30,17 @@ def audit(predictions, X, X_prime, y):
     # get indices of maximum k coefficients
     k = np.min([len(group_coefs), 3])
     top_indices = np.abs(group_coefs).argsort()[-k:][::-1]
-    print('accuracy: {}'.format(1-np.mean(np.abs(np.subtract(predictions, y)))))
-    print('group size: {}, gamma-unfairness: {}, FP-disparity: {}'.format(group_size, gamma_unfair, fp_in_group))
-    print('subgroup_coefficients: {}'.format(group_coefs),)
-    print('sensitive attributes: {}'.format([c for c in X_prime.columns],))
-    print('sensitive attributes with the largest group coefficients: {}'.format(X_prime.columns[top_indices]))
-    print('coefficients of top sensitive attributes: {}'.format(group_coefs[top_indices]))
+    # print('accuracy: {}'.format(1-np.mean(np.abs(np.subtract(predictions, y)))))
+    # print('group size: {}, gamma-unfairness: {}, FP-disparity: {}'.format(group_size, gamma_unfair, fp_in_group))
+    # print('subgroup_coefficients: {}'.format(group_coefs),)
+    # print('sensitive attributes: {}'.format([c for c in X_prime.columns],))
+    # print('sensitive attributes with the largest group coefficients: {}'.format(X_prime.columns[top_indices]))
+    # print('coefficients of top sensitive attributes: {}'.format(group_coefs[top_indices]))
+    return gamma_unfair
+
+
+
+
 
 def get_group(A, X, X_sens, y_g, FP):
     """Given decisions on X, sensitive attributes, labels, and FP rate audit wrt

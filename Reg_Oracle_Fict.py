@@ -252,11 +252,6 @@ if __name__ == "__main__":
         FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
         # dual player best responds to strategy up to t-1
         f = get_group(A, X, X_prime, y, FP)
-
-        # check the marginal FP disparity in marginal threshold groups
-        marginal_unfairness = calc_unfairness(A, X_prime, y, FP)
-        print('marginal fp disparity in each protected attribute: \n {}'.format(marginal_unfairness))
-        
         # flag whether FP disparity was positive or negative
         pos_neg = f[4]
         fp_disparity = f[1]

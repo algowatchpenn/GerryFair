@@ -24,10 +24,15 @@ def clean_communities(num_sens):
     q_y = np.percentile(y, 20)
     # convert y's to binary predictions on whether the neighborhood is
     # especially violent
-    y = [np.round((1 + np.sign(s - q_y)) / 2) for s in y]
+    y = pd.Series([np.round((1 + np.sign(s - q_y)) / 2) for s in y])
     X = df.iloc[:, 0:122]
     X_prime = df_sens
+    for s in range(num_sens):
+        median = np.median(df_sens.iloc[:, s])
+        X_prime.iloc[:, s] = 1*(X_prime > median)
     return X, X_prime, y
+
+
 
 # num_sens in 1:9
 def clean_lawschool(num_sens):
@@ -52,3 +57,6 @@ def clean_lawschool(num_sens):
     x_prime = df.iloc[:, sens_features[0:num_sens]]
     return df, x_prime, y
 
+x, a, y = clean_communities(18)
+a.columns
+print(len(a.columns))

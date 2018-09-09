@@ -25,7 +25,7 @@ def add_intercept(X):
 def one_hot_code(df1, sens_dict):
     cols = df1.columns
     for c in cols:
-        if isinstance(df1[c][0], basestring):
+        if isinstance(df1[c][0], str):
             column = df1[c]
             df1 = df1.drop(c, 1)
             unique_values = list(set(column))
@@ -65,31 +65,14 @@ def clean_communities():
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
     x_prime = df[sens_names]
-    #X = center(X)
+    X = center(X)
     # X = add_intercept(X)
-    #x_prime = center(x_prime)
+    x_prime = center(x_prime)
     # x_prime = add_intercept(x_prime)
-    return X, x_prime, y
+    return X, x_prime, pd.Series(y)
 
 
-# def clean_communities():
-#     num_sens = 18
-#     # Data Cleaning and Import
-#     df = pd.read_csv('dataset/communities.csv')
-#     df = df.fillna(0)
-#
-#     # sensitive variables are just racial distributions in the population and police force as well as foreign status
-#     # median income and pct of illegal immigrants / related variables are not labeled sensitive
-#     sens_features = [3, 4, 5, 6, 22, 23, 24, 25, 26, 27, 61, 62, 92, 105, 106, 107, 108, 109]
-#     df_sens = df.iloc[:, sens_features[0:num_sens]]
-#     y = df['ViolentCrimesPerPop']
-#     q_y = np.percentile(y, 70)
-#     # convert y's to binary predictions on whether the neighborhood is
-#     # especially violent
-#     y = [np.round((1 + np.sign(s - q_y)) / 2) for s in y]
-#     X = df.iloc[:, 0:122]
-#     X_prime = df_sens
-#     return X, X_prime, y
+
 
 
 # num_sens in 1:17
@@ -104,6 +87,7 @@ def clean_lawschool():
     df_y = df['bar1']
     df = df.drop('bar1', 1)
     y = [int(a == 'P') for a in df_y]
+    y = pd.Series(y)
     sens_df = pd.read_csv('dataset/lawschool_protected.csv')
     sens_cols = [str(c) for c in sens_df.columns if sens_df[c][0] == 1]
     sens_dict = {c: 1 if c in sens_cols else 0 for c in df.columns}
@@ -121,7 +105,10 @@ def clean_lawschool():
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
     x_prime = df[sens_names]
-    return df, x_prime, y
+
+    df.index = range(len(df))
+    x_prime.index = range(len(x_prime))
+    return df, x_prime, pd.Series(y)
 
 
 def clean_synthetic(num_sens):
@@ -153,6 +140,11 @@ def clean_adult():
     x_prime = df[sens_names]
     return df, x_prime, y
 
+
+
+
+
+
 def clean_adultshort():
     df = pd.read_csv('dataset/adultshort.csv')
     df = df.dropna()
@@ -179,12 +171,12 @@ def clean_adultshort():
 
 # currently 6 sensitive attributes
 def clean_student():
-    df = pd.read_csv('dataset/student/student-mat.csv', sep=';')
+    df = pd.read_csv('dataset/student-mat.csv', sep=';')
     df = df.dropna()
     y = df['G3']
     y = [0 if y < 11 else 1 for y in y]
     df = df.drop(['G3', 'G2', 'G1'], 1)
-    sens_df = pd.read_csv('dataset/student/student_protected.csv')
+    sens_df = pd.read_csv('dataset/student_protected.csv')
     sens_cols = [str(c) for c in sens_df.columns if sens_df[c][0] == 1]
     print('sensitive features: {}'.format(sens_cols))
     sens_dict = {c: 1 if c in sens_cols else 0 for c in df.columns}
@@ -192,13 +184,9 @@ def clean_student():
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
     x_prime = df[sens_names]
-    return df, x_prime, y
+    return df, x_prime, pd.Series(y)
 
 
-
-
-
-
-
-
-
+x, a, y = clean_communities()
+a.columns
+print(len(a.columns))
