@@ -13,20 +13,34 @@ python packages: pandas, numpy, sklearn
 
 To learn a fair classifier on a dataset in the dataset folder subject to gamma unfairness:
 ```python
-python Reg_Oracle_Fict.py C printflag, heatmapflag, max_iterations gamma_unfairness
+python Reg_Oracle_Fict.py C printflag heatmapflag heatmap_iter max_iterations gamma_unfairness
+```
+e.g. 
+```python
+Reg_Oracle_Fict.py 10 True False 1 communities  10 .01
 ```
 arguments: 
 * C: bound on the max L1 norm of the dual variables
 * printflag: flag True or False determines whether output is printed
 * heatmapflag: flag True or False determines whether heatmaps are generated 
+* heatmap_iter:  number of iterations heatmap data is saved after
 * dataset: name of the dataset (communities, lawschool, adult, student)
 * max_iterations: number of iterations to terminate after
 * gamma_unfairness: approximate gamma disparity allowed in subgroups
 
+outputs (if ```python printflag == True```), at each iteration print: 
+* ave_error: the error of the current mixture of classifiers found by the Learner)
+* gamma-unfairness: the gamma disparity witnessed by the subgroup found at the current round by the Auditor
+* group_size: the size of the above group conditioned on `y = 0`
+* frac included ppl: the fraction of the dataset that has been included in a group found by the Auditor thus far (on `y =0`)
+* coefficients of g_t: the coefficients of the hyperplane that defines the group found by the Auditor
+* if( ```python heatmapflag == True```)
+
 To audit for gamma unfairness on a dataset:
 ```python
-python Audit.py num_sensitive_feautures dataset max_iterations 
+python Audit.py dataset max_iterations 
 ```
+* audits trained logistic regression, SVM, nearest-neighbor model. 
 ## Datasets
 #### communities: http://archive.ics.uci.edu/ml/datasets/communities+and+crime
 #### lawschool: https://eric.ed.gov/?id=ED469370
