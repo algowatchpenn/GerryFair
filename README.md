@@ -71,8 +71,9 @@ def clean_communities():
 
 
 ## License
-Seth Neel, Michael Kearns, Aaron Roth, Steven Wu.
+Maintained by: Seth Neel (sethneel@wharton.upenn.edu)
+Property of: Michael Kearns, Seth Neel, Aaron Roth, Z. Steven Wu.
 
 ## Acknowledgments
 
-* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf, whose algorithm is implemented in [MSR_Reduction.py](MSR_Reduction.py) and evaluated in [Audit.py](Audit.py)
+* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf, whose algorithm/code is in the `fairlearn` folder, and is audited in `Audit.py`.
