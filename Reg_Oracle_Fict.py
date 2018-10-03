@@ -1,6 +1,7 @@
 # Version Created: 20 April 2018
 # import matplotlib
 # matplotlib.use('TkAgg')
+import argparse
 import clean_data
 import numpy as np
 import pandas as pd
@@ -17,6 +18,24 @@ from Marginal_Reduction import *
 
 # Helper Functions
 # -----------------------------------------------------------------------------------------------------------
+
+#Parse arguments for user input
+def setup():
+    parser = argparse.ArgumentParser(description='Reg_Oracle_Fict input parser')
+    parser.add_argument('-C', type=float, default=10, required=False, help='C is the bound on the maxL1 norm of the dual variables')
+    parser.add_argument('-pf', default=False, action='store_true', required=False,
+                        help='Include this flag to determine whether output is printed')
+    parser.add_argument('-hmf', default=False, action='store_true', required=False,
+                        help='Include this flag to determine whether heatmaps are generated')
+    parser.add_argument('-hm_iter', type=int, default=1, required=False,
+                         help='number of iterations heatmap data is saved after')
+    parser.add_argument('ds', type=str, help='name of the dataset (communities, lawschool, adult, student)')
+    parser.add_argument('-max_iter', type=int, default=10, required=False, help='number of iterations to terminate after')
+    parser.add_argument('-gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups')
+
+    args = parser.parse_args()
+    return [args.C, args.pf, args.hmf, args.hm_iter, args.ds, args.max_iter, args.gamma_unfair]
+
 
 # Inputs:
 # A: the previous set of decisions (probabilities) up to time iter - 1
@@ -177,14 +196,14 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 if __name__ == "__main__":
     # get command line arguments
-    C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma = sys.argv[1:]
-    printflag = sys.argv[1].lower() == 'true'
-    heatmapflag = sys.argv[2].lower() == 'true'
-    heatmap_iter = int(heatmap_iter)
-    C = float(C)
-    dataset = str(dataset)
-    max_iters = int(max_iters)
-    gamma = float(gamma)
+    C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma = setup() #sys.argv[1:]
+    # printflag = sys.argv[1].lower() == 'true'
+    # heatmapflag = sys.argv[2].lower() == 'true'
+    # heatmap_iter = int(heatmap_iter)
+    # C = float(C)
+    # dataset = str(dataset)
+    # max_iters = int(max_iters)
+    # gamma = float(gamma)
     random.seed(1)
 
     # Data Cleaning and Import
