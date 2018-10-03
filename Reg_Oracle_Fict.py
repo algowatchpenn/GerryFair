@@ -210,6 +210,7 @@ if __name__ == "__main__":
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
 
+    # X = full data, X_prime = protected, y = labels
     X, X_prime, y = clean_the_dataset()
 
     # print out the invoked parameters
@@ -248,6 +249,7 @@ if __name__ == "__main__":
         # Average decisions
         A = emp_p[1]
 
+        # TODO: get heatmap working
         # save heatmap every heatmap_iter iterations
         if (heatmapflag is True) and (iteration % heatmap_iter) == 1:
             A_heat = A
