@@ -4,6 +4,16 @@ import sys
 
 # Helper Functions
 # -----------------------
+
+#Parse arguments for user input
+def setup():
+    parser = argparse.ArgumentParser(description='Marginal_Reduction.py input parser')
+    parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student), (Required)')
+    parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after, (Default = 10)')
+
+    args = parser.parse_args()
+    return [args.dataset, args.iters]
+
 # calculate the next lambda via gradient descent
 # for a group a compute P(preds = 1|A = a, Y = 0) = 1/n # y = 0, A = a,
 # preds = 1 / p0a
@@ -145,9 +155,9 @@ def marginal_preds(X, X_prime, X_prime_cts, y, max_iters, printflag=False):
 if __name__ == "__main__":
     random.seed(1)
     # get command line arguments
-    dataset, max_iters = sys.argv[1:]
-    dataset = str(dataset)
-    max_iters = float(max_iters)
+    dataset, max_iters = setup() #sys.argv[1:]
+    # dataset = str(dataset)
+    # max_iters = float(max_iters)
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)

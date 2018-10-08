@@ -7,40 +7,85 @@ This repository contains python code for both
 
 ### Prerequisites
 
-python packages: pandas, numpy, sklearn 
+python packages: pandas, numpy, sklearn, matplotlib
 
 ## Running the tests
 
-To learn a fair classifier on a dataset in the dataset folder subject to gamma unfairness:
+To learn a fair classifier on a dataset in the dataset folder subject to gamma unfairness, use Reg_Oracle_Fict.py.
+The usage can be found by typing:
+
 ```
-python Reg_Oracle_Fict.py C printflag heatmapflag heatmap_iter max_iterations gamma_unfairness
+python Reg_Oracle_Fict.py -h
+
+    usage: Reg_Oracle_Fict.py [-h] [-C C] [-p] [--heatmap]
+                              [--heatmap_iters HEATMAP_ITERS] [-d DATASET]
+                              [-i ITERS] [--gamma_unfair GAMMA_UNFAIR] [--plots]
+
+    Reg_Oracle_Fict input parser
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -C C                  C is the bound on the maxL1 norm of the dual
+                            variables, (Default = 10)
+      -p, --print_output    Include this flag to determine whether output is
+                            printed, (Default = False)
+      --heatmap             Include this flag to determine whether heatmaps are
+                            generated, (Default = False)
+      --heatmap_iters HEATMAP_ITERS
+                            number of iterations heatmap data is saved after,
+                            (Default = 1)
+      -d DATASET, --dataset DATASET
+                            name of the dataset (communities, lawschool, adult,
+                            student), (Required)
+      -i ITERS, --iters ITERS
+                            number of iterations to terminate after, (Default =
+                            10)
+      --gamma_unfair GAMMA_UNFAIR
+                            approximate gamma disparity allowed in subgroups,
+                            (Default = .01)
+      --plots               Include this flag to determine whether plots of error
+                            and unfairness are generated, (Default = False)
 ```
-e.g. 
+An example of this usage is:
 ```
 python Reg_Oracle_Fict.py -C 10 -p -h --heatmap_iters 1 -d communities -i 10 -g .01
 ```
-arguments: 
-* -C: bound on the max L1 norm of the dual variables
-* --print_output, -p: flag True or False determines whether output is printed
-* --heatmap: flag True or False determines whether heatmaps are generated 
-* --heatmap_iters:  number of iterations heatmap data is saved after
-* --dataset, -d: name of the dataset (communities, lawschool, adult, student)
-* --iters, -i: number of iterations to terminate after
-* --gamma_unfair, -g: approximate gamma disparity allowed in subgroups
-* --plots: flag True or False determines whether plots are generated
+Again, the arguments are:
+* -C: bound on the max L1 norm of the dual variables with a default value of 10
+* --print_output, -p: flag True or False determines whether output is printed with a default value of False
+* --heatmap: flag True or False determines whether heatmaps are generated with a default value of False
+* --heatmap_iters:  number of iterations heatmap data is saved after with a default value of 1
+* --dataset, -d: name of the dataset (communities, lawschool, adult, student), this is required.
+* --iters, -i: number of iterations to terminate after with a default value of 10
+* --gamma_unfair, -g: approximate gamma disparity allowed in subgroups with a default value of .01
+* --plots: flag True or False determines whether plots are generated with a default value of False
 
-outputs (if ```python printflag == True```), at each iteration print: 
+outputs (if ```--print_output``` is included), at each iteration print:
 * ave_error: the error of the current mixture of classifiers found by the Learner)
 * gamma-unfairness: the gamma disparity witnessed by the subgroup found at the current round by the Auditor
 * group_size: the size of the above group conditioned on `y = 0`
 * frac included ppl: the fraction of the dataset that has been included in a group found by the Auditor thus far (on `y =0`)
 * coefficients of g_t: the coefficients of the hyperplane that defines the group found by the Auditor
-* if( ```python heatmapflag == True```)
+* if ```--heatmap``` is included.
 
-To audit for gamma unfairness on a dataset:
-```python
-python Audit.py dataset max_iterations 
+To audit for gamma unfairness on a dataset, use Audit.py. The usage can be found by typing:
 ```
+python Audit.py -h
+
+    usage: Audit.py [-h] [-d DATASET] [-i ITERS]
+
+    Audit.py input parser
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -d DATASET, --dataset DATASET
+                            name of the dataset (communities, lawschool, adult,
+                            student, all), (Required)
+      -i ITERS, --iters ITERS
+                            number of iterations to terminate after, (Default =
+                            10)
+```
+
 * audits trained logistic regression, SVM, nearest-neighbor model. 
 ## Datasets
 #### communities: http://archive.ics.uci.edu/ml/datasets/communities+and+crime

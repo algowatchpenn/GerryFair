@@ -22,18 +22,18 @@ from matplotlib import pyplot as plt
 #Parse arguments for user input
 def setup():
     parser = argparse.ArgumentParser(description='Reg_Oracle_Fict input parser')
-    parser.add_argument('-C', type=float, default=10, required=False, help='C is the bound on the maxL1 norm of the dual variables')
+    parser.add_argument('-C', type=float, default=10, required=False, help='C is the bound on the maxL1 norm of the dual variables, (Default = 10)')
     parser.add_argument('-p', '--print_output', default=False, action='store_true', required=False,
-                        help='Include this flag to determine whether output is printed')
+                        help='Include this flag to determine whether output is printed, (Default = False)')
     parser.add_argument('--heatmap', default=False, action='store_true', required=False,
-                        help='Include this flag to determine whether heatmaps are generated')
+                        help='Include this flag to determine whether heatmaps are generated, (Default = False)')
     parser.add_argument('--heatmap_iters', type=int, default=1, required=False,
-                         help='number of iterations heatmap data is saved after')
-    parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student)')
-    parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after')
-    parser.add_argument('--gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups')
+                         help='number of iterations heatmap data is saved after, (Default = 1)')
+    parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student), (Required)')
+    parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after, (Default = 10)')
+    parser.add_argument('--gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups, (Default = .01)')
     parser.add_argument('--plots', default=False, action='store_true', required=False,
-                        help='Include this flag to determine whether plots of error and unfairness are generated')
+                        help='Include this flag to determine whether plots of error and unfairness are generated, (Default = False)')
     args = parser.parse_args()
     return [args.C, args.print_output, args.heatmap, args.heatmap_iters, args.dataset, args.iters, args.gamma_unfair, args.plots]
 

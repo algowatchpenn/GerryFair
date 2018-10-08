@@ -3,13 +3,22 @@ from Reg_Oracle_Fict import *
 from Marginal_Reduction import *
 from sklearn import svm
 from sklearn import neighbors
+#import sys
 
 
 
-# USAGE: python Audit.py all 50
+# For usage information, see README.md or use: python Audit.py -h
 
 # Helper Functions
 
+#Parse arguments for user input
+def setup():
+    parser = argparse.ArgumentParser(description='Audit.py input parser')
+    parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student, all), (Required)')
+    parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after, (Default = 10)')
+
+    args = parser.parse_args()
+    return [args.dataset, args.iters]
 
 def get_fp(preds, y):
     """Return the fp rate of preds wrt to true labels y."""
@@ -99,9 +108,9 @@ def get_group(A, X, X_sens, y_g, FP):
 if __name__ == "__main__":
     random.seed(1)
     ds = ['communities', 'lawschool', 'adult', 'student']
-    dataset, max_iters = sys.argv[1:]
-    dataset = str(dataset)
-    max_iters = int(max_iters)
+    dataset, max_iters = setup() #sys.argv[1:]
+    # dataset = str(dataset)
+    # max_iters = int(max_iters)
 
     if dataset == 'all':
         for dataset in ds:
