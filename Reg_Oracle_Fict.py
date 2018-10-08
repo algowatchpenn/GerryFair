@@ -1,6 +1,6 @@
 # Version Created: 20 April 2018
-# import matplotlib
-# matplotlib.use('TkAgg')
+import matplotlib
+matplotlib.use('TkAgg')
 import argparse
 import clean_data
 import numpy as np
@@ -9,9 +9,9 @@ from sklearn import linear_model
 import random
 import Reg_Oracle_Class
 import sys
-# from matplotlib import pyplot as plt
-import heatmap
-from Marginal_Reduction import *
+from matplotlib import pyplot as plt
+#import heatmap
+#from Marginal_Reduction import *
 
 # USAGE: python Reg_Oracle_Fict.py 100 True communities reg_oracle 5 .006 'gamma'
 
@@ -23,18 +23,19 @@ from Marginal_Reduction import *
 def setup():
     parser = argparse.ArgumentParser(description='Reg_Oracle_Fict input parser')
     parser.add_argument('-C', type=float, default=10, required=False, help='C is the bound on the maxL1 norm of the dual variables')
-    parser.add_argument('-pf', default=False, action='store_true', required=False,
+    parser.add_argument('-p', '--print_output', default=False, action='store_true', required=False,
                         help='Include this flag to determine whether output is printed')
-    parser.add_argument('-hmf', default=False, action='store_true', required=False,
+    parser.add_argument('--heatmap', default=False, action='store_true', required=False,
                         help='Include this flag to determine whether heatmaps are generated')
-    parser.add_argument('-hm_iter', type=int, default=1, required=False,
+    parser.add_argument('--heatmap_iters', type=int, default=1, required=False,
                          help='number of iterations heatmap data is saved after')
-    parser.add_argument('ds', type=str, help='name of the dataset (communities, lawschool, adult, student)')
-    parser.add_argument('-max_iter', type=int, default=10, required=False, help='number of iterations to terminate after')
-    parser.add_argument('-gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups')
-
+    parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student)')
+    parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after')
+    parser.add_argument('--gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups')
+    parser.add_argument('--plots', default=False, action='store_true', required=False,
+                        help='Include this flag to determine whether plots of error and unfairness are generated')
     args = parser.parse_args()
-    return [args.C, args.pf, args.hmf, args.hm_iter, args.ds, args.max_iter, args.gamma_unfair]
+    return [args.C, args.print_output, args.heatmap, args.heatmap_iters, args.dataset, args.iters, args.gamma_unfair, args.plots]
 
 
 # Inputs:
@@ -196,7 +197,7 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 if __name__ == "__main__":
     # get command line arguments
-    C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma = setup() #sys.argv[1:]
+    C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma, plots = setup() #sys.argv[1:]
     # printflag = sys.argv[1].lower() == 'true'
     # heatmapflag = sys.argv[2].lower() == 'true'
     # heatmap_iter = int(heatmap_iter)
@@ -306,7 +307,7 @@ if __name__ == "__main__":
         if printflag:
             print('ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(cum_group_mems[-1]/float(n))))
             group_coef = f[0].b0.coef_ - f[0].b1.coef_
-            print('YY coefficients of g_t: {}'.format(list(group_coef)))
+            #print('YY coefficients of g_t: {}'.format(list(group_coef)))
 
         # update costs: the primal player best responds
         c_1t = learner_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
@@ -315,29 +316,30 @@ if __name__ == "__main__":
         iteration += 1
         iteration = float(iteration)
 
-    # plot errors
-    # x = range(max_iters-1)
-    # y_t = errors_t
-    # fig1 = plt.figure()
-    # ax1 = fig1.add_subplot(111)
-    # ax1.plot(x,y_t)
-    # plt.ylabel('average error of mixture')
-    # plt.xlabel('iterations')
-    # plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    # ax1.plot(x, [np.mean(y_t)]*len(y_t))
-    # plt.clf()
-    #
-    # # plot fp disparity
-    # x = range(max_iters-1)
-    # y_t = fp_diff_t
-    # fig2 = plt.figure()
-    # ax2 = fig2.add_subplot(111)
-    # ax2.plot(x, y_t)
-    # plt.ylabel('fp_diff*group_size')
-    # plt.xlabel('iterations')
-    # plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-    # ax2.plot(x, [gamma]*len(y_t))
-    # plt.clf()
+    if plots:
+        # plot errors
+        x = range(max_iters-1)
+        y_t = errors_t
+        fig1 = plt.figure()
+        ax1 = fig1.add_subplot(111)
+        ax1.plot(x,y_t)
+        plt.ylabel('average error of mixture')
+        plt.xlabel('iterations')
+        plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
+        ax1.plot(x, [np.mean(y_t)]*len(y_t))
+        plt.show()
+        
+        # plot fp disparity
+        x = range(max_iters-1)
+        y_t = fp_diff_t
+        fig2 = plt.figure()
+        ax2 = fig2.add_subplot(111)
+        ax2.plot(x, y_t)
+        plt.ylabel('fp_diff*group_size')
+        plt.xlabel('iterations')
+        plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
+        ax2.plot(x, [gamma]*len(y_t))
+        plt.show()
 
 
 

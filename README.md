@@ -17,16 +17,17 @@ python Reg_Oracle_Fict.py C printflag heatmapflag heatmap_iter max_iterations ga
 ```
 e.g. 
 ```
-python Reg_Oracle_Fict.py 10 True False 1 communities  10 .01
+python Reg_Oracle_Fict.py -C 10 -p -h --heatmap_iters 1 -d communities -i 10 -g .01
 ```
 arguments: 
-* C: bound on the max L1 norm of the dual variables
-* printflag: flag True or False determines whether output is printed
-* heatmapflag: flag True or False determines whether heatmaps are generated 
-* heatmap_iter:  number of iterations heatmap data is saved after
-* dataset: name of the dataset (communities, lawschool, adult, student)
-* max_iterations: number of iterations to terminate after
-* gamma_unfairness: approximate gamma disparity allowed in subgroups
+* -C: bound on the max L1 norm of the dual variables
+* --print_output, -p: flag True or False determines whether output is printed
+* --heatmap: flag True or False determines whether heatmaps are generated 
+* --heatmap_iters:  number of iterations heatmap data is saved after
+* --dataset, -d: name of the dataset (communities, lawschool, adult, student)
+* --iters, -i: number of iterations to terminate after
+* --gamma_unfair, -g: approximate gamma disparity allowed in subgroups
+* --plots: flag True or False determines whether plots are generated
 
 outputs (if ```python printflag == True```), at each iteration print: 
 * ave_error: the error of the current mixture of classifiers found by the Learner)
