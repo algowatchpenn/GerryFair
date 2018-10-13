@@ -18,10 +18,10 @@ The usage can be found by typing:
 python Reg_Oracle_Fict.py -h
 
     usage: Reg_Oracle_Fict.py [-h] [-C C] [-p] [--heatmap]
-                              [--heatmap_iters HEATMAP_ITERS] [-d DATASET]
-                              [-a ATTRIBUTES] [-i ITERS] [-g GAMMA_UNFAIR]
-                              [--plots PLOTS] [--gamma_pareto GAMMA_PARETO]
-    
+                          [--heatmap_iters HEATMAP_ITERS] [-d DATASET]
+                          [-a ATTRIBUTES] [-i ITERS] [-g GAMMA_UNFAIR]
+                          [--plots]
+
     Reg_Oracle_Fict input parser
     
     optional arguments:
@@ -47,15 +47,8 @@ python Reg_Oracle_Fict.py -h
       -g GAMMA_UNFAIR, --gamma_unfair GAMMA_UNFAIR
                             approximate gamma disparity allowed in subgroups,
                             (Default = .01)
-      --plots PLOTS         Include this flag to determine what types of plots of
-                            error and unfairness are generated 
-                            None = Show no plots 
-                            Single = Show plots of one run 
-                            Pareto = Show plots for various values of gamma
-      --gamma_pareto GAMMA_PARETO
-                            If plots='Pareto', use this flag to specify which
-                            values of gamma are used in Pareto curve (Default =
-                            0.1,0.2)
+      --plots               Include this flag to determine whether plots of error
+                            and unfairness are generated, (Default = False)
 
 ```
 An example of this usage is:
