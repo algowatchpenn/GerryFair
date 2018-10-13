@@ -1,19 +1,16 @@
 # Version Created: 20 April 2018
-import matplotlib
-matplotlib.use('TkAgg')
 import argparse
-import clean_data
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
 import random
-import Reg_Oracle_Class
 import sys
-from matplotlib import pyplot as plt
-#import heatmap
-#from Marginal_Reduction import *
 
-# USAGE: python Reg_Oracle_Fict.py 100 True communities reg_oracle 5 .006 'gamma'
+import fairness_plots
+import Reg_Oracle_Class
+import clean_generic_data
+
+
 
 
 # Helper Functions
@@ -29,13 +26,16 @@ def setup():
                         help='Include this flag to determine whether heatmaps are generated, (Default = False)')
     parser.add_argument('--heatmap_iters', type=int, default=1, required=False,
                          help='number of iterations heatmap data is saved after, (Default = 1)')
-    parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student), (Required)')
+    parser.add_argument('-d', '--dataset', type=str,
+                        help='name of the dataset file (Required)')
+    parser.add_argument('-a', '--attributes', type=str,
+                        help='name of the file representing which attributes are protected (unprotected = 0, protected = 1, label = 2) (Required)')
     parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after, (Default = 10)')
-    parser.add_argument('--gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups, (Default = .01)')
+    parser.add_argument('-g', '--gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups, (Default = .01)')
     parser.add_argument('--plots', default=False, action='store_true', required=False,
                         help='Include this flag to determine whether plots of error and unfairness are generated, (Default = False)')
     args = parser.parse_args()
-    return [args.C, args.print_output, args.heatmap, args.heatmap_iters, args.dataset, args.iters, args.gamma_unfair, args.plots]
+    return [args.C, args.print_output, args.heatmap, args.heatmap_iters, args.dataset, args.attributes, args.iters, args.gamma_unfair, args.plots]
 
 
 # Inputs:
@@ -195,28 +195,9 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 # -----------------------------------------------------------------------------------------------------------
 # Fictitious Play Algorithm
 
-if __name__ == "__main__":
-    # get command line arguments
-    C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma, plots = setup() #sys.argv[1:]
-    # printflag = sys.argv[1].lower() == 'true'
-    # heatmapflag = sys.argv[2].lower() == 'true'
-    # heatmap_iter = int(heatmap_iter)
-    # C = float(C)
-    # dataset = str(dataset)
-    # max_iters = int(max_iters)
-    # gamma = float(gamma)
-    random.seed(1)
-
-    # Data Cleaning and Import
-    f_name = 'clean_{}'.format(dataset)
-    clean_the_dataset = getattr(clean_data, f_name)
-
-    # X = full data, X_prime = protected, y = labels
-    X, X_prime, y = clean_the_dataset()
-
-    # print out the invoked parameters
-    print('Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, gamma = {}'.format(C, X_prime.shape[1], dataset, gamma))
-
+# Input: dataset cleaned into X, X_prime, y, and arguments from commandline
+# Output: for each iteration, the error and the fp difference - heatmap can also be produced
+def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_iters, gamma):
     # subsample
     # if num > 0:
     #     X = X.iloc[0:num, 0:col]
@@ -226,7 +207,7 @@ if __name__ == "__main__":
     stop = False
     n = X.shape[0]
     m = len([s for s in y if s == 0])
-    p = [learner_br([1.0/n]*m, X, y)]
+    p = [learner_br([1.0 / n] * m, X, y)]
     iteration = 1
     errors_t = []
     fp_diff_t = []
@@ -305,9 +286,18 @@ if __name__ == "__main__":
         # unfairness = calc_unfairness(A, X_prime, y, FP)
         # print
         if printflag:
-            print('ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err), '{:f}'.format(np.abs(f[1])), '{:f}'.format(group_size_0), '{:f}'.format(cum_group_mems[-1]/float(n))))
+            print(
+                'ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err),
+                                                                                                    '{:f}'.format(
+                                                                                                        np.abs(f[1])),
+                                                                                                    '{:f}'.format(
+                                                                                                        group_size_0),
+                                                                                                    '{:f}'.format(
+                                                                                                        cum_group_mems[
+                                                                                                            -1] / float(
+                                                                                                            n))))
             group_coef = f[0].b0.coef_ - f[0].b1.coef_
-            #print('YY coefficients of g_t: {}'.format(list(group_coef)))
+            # print('YY coefficients of g_t: {}'.format(list(group_coef)))
 
         # update costs: the primal player best responds
         c_1t = learner_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
@@ -315,33 +305,51 @@ if __name__ == "__main__":
         sys.stdout.flush()
         iteration += 1
         iteration = float(iteration)
+    return errors_t, fp_diff_t
+
+
+# -----------------------------------------------------------------------------------------------------------
+# Main method definition
+
+if __name__ == "__main__":
+    # get command line arguments
+    C, printflag, heatmapflag, heatmap_iter, dataset, attributes, max_iters, gamma, plots = setup() #sys.argv[1:]
+    # printflag = sys.argv[1].lower() == 'true'
+    # heatmapflag = sys.argv[2].lower() == 'true'
+    # heatmap_iter = int(heatmap_iter)
+    # C = float(C)
+    # dataset = str(dataset)
+    # max_iters = int(max_iters)
+    # gamma = float(gamma)
+    random.seed(1)
+
+    # Data Cleaning and Import
+    X, X_prime, y = clean_generic_data.clean_dataset(dataset, attributes)
+
+    # print out the invoked parameters
+    print(
+        'Invoked Parameters: C = {}, number of sensitive attributes = {}, random seed = 1, dataset = {}, gamma = {}'.format(
+            C, X_prime.shape[1], dataset, gamma))
+
+    # Run the fictitious play algorithm
+    errors_t, fp_diff_t = fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_iters, gamma)
 
     if plots:
-        # plot errors
-        x = range(max_iters-1)
-        y_t = errors_t
-        fig1 = plt.figure()
-        ax1 = fig1.add_subplot(111)
-        ax1.plot(x,y_t)
-        plt.ylabel('average error of mixture')
-        plt.xlabel('iterations')
-        plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-        ax1.plot(x, [np.mean(y_t)]*len(y_t))
-        plt.show()
-        
-        # plot fp disparity
-        x = range(max_iters-1)
-        y_t = fp_diff_t
-        fig2 = plt.figure()
-        ax2 = fig2.add_subplot(111)
-        ax2.plot(x, y_t)
-        plt.ylabel('fp_diff*group_size')
-        plt.xlabel('iterations')
-        plt.title('fp_diff*size vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
-        ax2.plot(x, [gamma]*len(y_t))
-        plt.show()
+        fairness_plots.plot_single(errors_t, fp_diff_t, max_iters, gamma, C)
 
 
-
-
-
+    # TODO: Decide on functionality for how pareto curve should be accessed.
+    # if plots == 'Pareto':
+    #     ## Read string of gamma values into a list
+    #     gamma_list = [float(item) for item in pareto_gammas.split(',')]
+    #
+    #     ## Store errors and fp over time for each gamma
+    #     all_errors = []
+    #     all_fp = []
+    #     for g in gamma_list:
+    #         errors_gt, fp_diff_gt = fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_iters,g)
+    #
+    #         all_errors.append(errors_gt)
+    #         all_fp.append(fp_diff_gt)
+    #
+    #     fairness_plots.plot_pareto(all_errors, all_fp)
