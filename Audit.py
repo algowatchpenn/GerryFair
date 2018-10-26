@@ -15,10 +15,12 @@ from sklearn import neighbors
 def setup():
     parser = argparse.ArgumentParser(description='Audit.py input parser')
     parser.add_argument('-d', '--dataset', type=str, help='name of the dataset (communities, lawschool, adult, student, all), (Required)')
+    parser.add_argument('-a', '--attributes', type=str,
+                        help='name of the file representing which attributes are protected (unprotected = 0, protected = 1, label = 2) (Required)')
     parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after, (Default = 10)')
 
     args = parser.parse_args()
-    return [args.dataset, args.iters]
+    return [args.dataset, args.attributes, args.iters]
 
 def get_fp(preds, y):
     """Return the fp rate of preds wrt to true labels y."""
@@ -108,16 +110,16 @@ def get_group(A, X, X_sens, y_g, FP):
 if __name__ == "__main__":
     random.seed(1)
     ds = ['communities', 'lawschool', 'adult', 'student']
-    dataset, max_iters = setup() #sys.argv[1:]
+    dataset, attributes, max_iters = setup() #sys.argv[1:]
     # dataset = str(dataset)
     # max_iters = int(max_iters)
 
     if dataset == 'all':
         for dataset in ds:
             # Data Cleaning and Import
-            f_name = 'clean_{}'.format(dataset)
-            clean_the_dataset = getattr(clean_data, f_name)
-            X, X_prime, y = clean_the_dataset()
+            # f_name = 'clean_{}'.format(dataset)
+            # clean_the_dataset = getattr(clean_data, f_name)
+            X, X_prime, y = clean_generic_data.clean_dataset(dataset, attributes)
 
             # print out the invoked parameters
             num_sens = X_prime.shape[1]
@@ -165,9 +167,9 @@ if __name__ == "__main__":
             audit(yhat, X, X_prime, y)
     else:
         # Data Cleaning and Import
-        f_name = 'clean_{}'.format(dataset)
-        clean_the_dataset = getattr(clean_data, f_name)
-        X, X_prime, y = clean_the_dataset()
+        # f_name = 'clean_{}'.format(dataset)
+        # clean_the_dataset = getattr(clean_data, f_name)
+        X, X_prime, y = clean_generic_data.clean_dataset(dataset, attributes)
 
         # print out the invoked parameters
         num_sens = X_prime.shape[1]
@@ -202,7 +204,7 @@ if __name__ == "__main__":
         audit(predictions=yhat, X=X, X_prime=X_prime, y=y)
 
         # Marginal reduction with Reg Oracle
-        X, X_prime_cts, y = clean_the_dataset()
+        X, X_prime_cts, y = clean_generic_data.clean_dataset(dataset, attributes)
         X_prime = X_prime_cts.iloc[:,:]
         n = X.shape[0]
         # threshold sensitive features by average value
