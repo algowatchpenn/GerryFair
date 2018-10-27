@@ -78,7 +78,7 @@ To audit for gamma unfairness on a dataset, use Audit.py. The usage can be found
 ```
 python Audit.py -h
 
-    usage: Audit.py [-h] [-d DATASET] [-i ITERS]
+    usage: Audit.py [-h] [-d DATASET] [-a ATTRIBUTES] [-i ITERS]
 
     Audit.py input parser
 
@@ -87,6 +87,10 @@ python Audit.py -h
       -d DATASET, --dataset DATASET
                             name of the dataset (communities, lawschool, adult,
                             student, all), (Required)
+      -a ATTRIBUTES, --attributes ATTRIBUTES
+                            name of the file representing which attributes are
+                            protected (unprotected = 0, protected = 1, label = 2)
+                            (Required)
       -i ITERS, --iters ITERS
                             number of iterations to terminate after, (Default =
                             10)

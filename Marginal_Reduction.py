@@ -31,7 +31,7 @@ def next_lambda(lambda_0, iteration, probs_0, h, X_prime, X, y):
     A = lambda_0.keys()
     pred = h.predict(X)
     fp = {a: compute_fp(a, probs_0, pred, X_prime, X, y) for a in A}
-    fp_av = np.mean({a: fp[a] for a in A if fp[a] != 'flag'}.values())
+    fp_av = np.mean(list({a: fp[a] for a in A if fp[a] != 'flag'}.values()))
     for a in A:
         if fp[a] == 'flag':
             fp[a] = fp_av
@@ -58,7 +58,7 @@ def update_costs(lambda_0, probs_0, X_prime, y):
     num_sens = X_prime.shape[1]
     cost_0 = [float(y[i] != 0) for i in range(len(y))]
     cost_1_ind = [y[i] == 0 for i in range(len(y))]
-    mu_0 = np.mean(lambda_0.values())
+    mu_0 = np.mean(list(lambda_0.values()))
     weights_1 = [0.0] * len(y)
     for k in range(len(y)):
         for j in range(num_sens):
