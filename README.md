@@ -9,6 +9,35 @@ This repository contains python code for both
 
 python packages: pandas, numpy, sklearn, matplotlib
 
+## Cleaning the data
+To test on a custom dataset, two files are needed: a file for the dataset itself and a file listing the types of attributes
+in the dataset. The dataset itself should use one-hot encoding for categorical variables, and the label column should have
+values in 0,1. For the attributes, each column should have a corresponding label, 0 (unprotected attribute), 1 (protected attribute),
+or 2 (label). See `communities_protected_formatted.csv` for an example.
+
+Then, to clean the dataset, use clean.py. The usage can be found by typing:
+```
+Fairness Data Cleaning
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -n NAME, --name NAME  name of the to store the new datasets (Required)
+  -d DATASET, --dataset DATASET
+                        name of the original dataset file (Required)
+  -a ATTRIBUTES, --attributes ATTRIBUTES
+                        name of the file representing which attributes are
+                        protected (unprotected = 0, protected = 1, label = 2)
+                        (Required)
+  -c, --centered        Include this flag to determine whether data should be
+                        centered
+
+```
+
+An example of the usage would be
+```
+python clean.py -n communities -d dataset/communities_formatted.csv -a dataset/communities_protected_formatted.csv -c
+```
+
 ## Running the tests
 
 To learn a fair classifier on a dataset in the dataset folder subject to gamma unfairness, use Reg_Oracle_Fict.py.
@@ -36,11 +65,7 @@ python Reg_Oracle_Fict.py -h
                             number of iterations heatmap data is saved after,
                             (Default = 1)
       -d DATASET, --dataset DATASET
-                            name of the dataset file (Required)
-      -a ATTRIBUTES, --attributes ATTRIBUTES
-                            name of the file representing which attributes are
-                            protected (unprotected = 0, protected = 1, label = 2)
-                            (Required)
+                            name of the dataset that was input into clean (Required)
       -i ITERS, --iters ITERS
                             number of iterations to terminate after, (Default =
                             10)
@@ -51,9 +76,9 @@ python Reg_Oracle_Fict.py -h
                             and unfairness are generated, (Default = False)
 
 ```
-An example of this usage is:
+An example of this usage, following the command for `clean` above, is:
 ```
-python Reg_Oracle_Fict.py -C 10 -p -h --heatmap_iters 1 -d dataset/communities_formatted.csv -a dataset/communities_protected_formatted.csv -i 10 -g .01
+python Reg_Oracle_Fict.py -C 10 -p --heatmap --heatmap_iters 1 -d communities -i 10 -g .01
 ```
 Again, the arguments are:
 * -C: bound on the max L1 norm of the dual variables with a default value of 10
@@ -61,7 +86,6 @@ Again, the arguments are:
 * --heatmap: flag True or False determines whether heatmaps are generated with a default value of False
 * --heatmap_iters:  number of iterations heatmap data is saved after with a default value of 1
 * --dataset, -d: name of the dataset, this is required.
-* --attributes, -a: name of attribute file, this is required.
 * --iters, -i: number of iterations to terminate after with a default value of 10
 * --gamma_unfair, -g: approximate gamma disparity allowed in subgroups with a default value of .01
 * --plots: flag True or False determines whether plots are generated with a default value of False
@@ -102,13 +126,6 @@ python Audit.py -h
 #### lawschool: https://eric.ed.gov/?id=ED469370
 #### adult: https://archive.ics.uci.edu/ml/datasets/adult
 #### student: https://archive.ics.uci.edu/ml/datasets/student+performance (math grades)
-
-
-### Testing on a custom dataset
-To test on a custom dataset, two files are needed: a file for the dataset itself and a file listing the types of attributes
-in the dataset. The dataset itself should use one-hot encoding for categorical variables, and the label column should have
-values in 0,1. For the attributes, each column should have a corresponding label, 0 (unprotected attribute), 1 (protected attribute),
-or 2 (label). See `communities_protected_formatted.csv` for an example.
 
 
 ## License

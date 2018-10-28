@@ -8,7 +8,7 @@ import sys
 
 import fairness_plots
 import Reg_Oracle_Class
-import clean_generic_data
+import clean
 
 
 
@@ -27,15 +27,13 @@ def setup():
     parser.add_argument('--heatmap_iters', type=int, default=1, required=False,
                          help='number of iterations heatmap data is saved after, (Default = 1)')
     parser.add_argument('-d', '--dataset', type=str,
-                        help='name of the dataset file (Required)')
-    parser.add_argument('-a', '--attributes', type=str,
-                        help='name of the file representing which attributes are protected (unprotected = 0, protected = 1, label = 2) (Required)')
+                        help='name of the dataset that was input into clean (Required)')
     parser.add_argument('-i', '--iters', type=int, default=10, required=False, help='number of iterations to terminate after, (Default = 10)')
     parser.add_argument('-g', '--gamma_unfair', type=float, default=.01, required=False, help='approximate gamma disparity allowed in subgroups, (Default = .01)')
     parser.add_argument('--plots', default=False, action='store_true', required=False,
                         help='Include this flag to determine whether plots of error and unfairness are generated, (Default = False)')
     args = parser.parse_args()
-    return [args.C, args.print_output, args.heatmap, args.heatmap_iters, args.dataset, args.attributes, args.iters, args.gamma_unfair, args.plots]
+    return [args.C, args.print_output, args.heatmap, args.heatmap_iters, args.dataset, args.iters, args.gamma_unfair, args.plots]
 
 
 # Inputs:
@@ -313,7 +311,7 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
 
 if __name__ == "__main__":
     # get command line arguments
-    C, printflag, heatmapflag, heatmap_iter, dataset, attributes, max_iters, gamma, plots = setup() #sys.argv[1:]
+    C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma, plots = setup() #sys.argv[1:]
     # printflag = sys.argv[1].lower() == 'true'
     # heatmapflag = sys.argv[2].lower() == 'true'
     # heatmap_iter = int(heatmap_iter)
@@ -324,7 +322,7 @@ if __name__ == "__main__":
     random.seed(1)
 
     # Data Cleaning and Import
-    X, X_prime, y = clean_generic_data.clean_dataset(dataset, attributes)
+    X, X_prime, y = clean.get_data(dataset)
 
     # print out the invoked parameters
     print(
