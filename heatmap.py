@@ -1,8 +1,17 @@
-#import matplotlib
-#matplotlib.use('TkAgg')
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
+
 from Reg_Oracle_Fict import *
 from Reg_Oracle_Class import *
-#import seaborn as sns
+import clean_data
+
+import seaborn as sns
 
 def calc_disp(A_p, X, y_g, X_sens, g):
     """Return the fp disparity in a group g."""
@@ -32,20 +41,26 @@ def heat_map(X, X_prime, y, A, eta, plot_name, mini=None, maxi=None):
             beta = [-1 + 2*eta*i, -1 + 2*eta*j]
             group = LinearThresh(beta)
             mat.iloc[int(ind),:] = [beta[0], beta[1], calc_disp(A_p=A, X=X, y_g=y, X_sens=X_prime, g=group)]
-            print(ind/q)
+            
+            #print(ind/q)
             ind += 1.0
     mat_list = pd.DataFrame({c: list(mat[c]) for c in mat.columns})
     mat_piv = mat_list.pivot(index=mat.columns[0], columns=mat.columns[1], values=mat.columns[2])
-    #if mini is None or maxi is None:
-    #    figure = sns.heatmap(mat_piv, fmt='g')
-    #else:
-    #    figure = sns.heatmap(mat_piv, fmt='g', vmin=mini, vmax=maxi)
-    # fig = figure.get_figure()
-    # fig.savefig('{}'.format(plot_name))
-    # fig.clf()
+    if mini is None or maxi is None:
+       figure = sns.heatmap(mat_piv, fmt='g')
+    else:
+       figure = sns.heatmap(mat_piv, fmt='g', vmin=mini, vmax=maxi)
+    fig = figure.get_figure()
+    fig.savefig('{}'.format(plot_name))
+    fig.clf()
+    
     mat_list.to_csv('{}.csv'.format(plot_name))
     print('zzz: {}'.format(mat_list))
+    
+    #ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)    
     return [np.min(mat.loc[:, 'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity']), mat_list]
+
+
 
 
 if __name__ == "__main__":
@@ -53,16 +68,19 @@ if __name__ == "__main__":
     # experiments
     C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, plot_name = 100, 2, True, 'communities', 'reg_oracle', 1000, .0001, 'gamma', 'test'
 
+    eta = 0.1
+
     # Data Cleaning and Import
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
-    X, X_prime, y = clean_the_dataset(num_sens)
+    X, X_prime, y = clean_the_dataset()
+    
     # subsample
     num = 100
     col = 14
     X = X.iloc[0:num,0:col]
     y = y[0:num]
-    X_prime = X_prime.iloc[0:num]
+    X_prime = X_prime.iloc[0:num, 0:num_sens]
 
     # get base classifier
     n = X.shape[0]
