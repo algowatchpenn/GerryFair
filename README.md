@@ -11,8 +11,9 @@ python packages: pandas, numpy, sklearn, matplotlib
 
 ## Cleaning the data
 To test on a custom dataset, two files are needed: a file for the dataset itself and a file listing the types of attributes
-in the dataset. The dataset itself should use one-hot encoding for categorical variables, and the label column should have
-values in 0,1. For the attributes, each column should have a corresponding label, 0 (unprotected attribute), 1 (protected attribute),
+in the dataset. The dataset itself only needs the label column to have
+values in 0,1. Our cleaning will automatically one-hot code the categorical variables and, if desired, center the data.
+For the attributes, each column should have a corresponding label, 0 (unprotected attribute), 1 (protected attribute),
 or 2 (label). See `communities_protected_formatted.csv` for an example.
 
 Then, to clean the dataset, use clean.py. The usage can be found by typing:
