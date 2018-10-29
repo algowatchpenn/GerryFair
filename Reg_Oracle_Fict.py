@@ -332,7 +332,6 @@ if __name__ == "__main__":
         plt.xlabel('iterations')
         plt.title('error vs. time: C: {}, gamma: {}, dataset: {}'.format(C, gamma, dataset))
         ax1.plot(x, [np.mean(y_t)]*len(y_t))
-        plt.show()
         
         # plot fp disparity
         x = range(max_iters-1)
