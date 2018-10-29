@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1, projection='3d')
 
 from Reg_Oracle_Fict import *
 from Reg_Oracle_Class import *
@@ -27,6 +25,9 @@ def calc_disp(A_p, X, y_g, X_sens, g):
     return (FP - fp_g) * g_size_0
 
 def heat_map(X, X_prime, y, A, eta, plot_name, vmin=None, vmax=None):
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1, projection='3d')
+    
     columns = [str(c) for c in X_prime.columns]
       
     attribute_1 = np.zeros(int(1/eta))
