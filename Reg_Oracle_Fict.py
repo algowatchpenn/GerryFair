@@ -24,7 +24,7 @@ def setup():
     parser.add_argument('-C', type=float, default=10, required=False, help='C is the bound on the maxL1 norm of the dual variables, (Default = 10)')
     parser.add_argument('-p', '--print_output', default=False, action='store_true', required=False,
                         help='Include this flag to determine whether output is printed, (Default = False)')
-    parser.add_argument('--heatmap', default=False, action='store_true', required=False,
+    parser.add_argument('-m', '--heatmap', default=False, action='store_true', required=False,
                         help='Include this flag to determine whether heatmaps are generated, (Default = False)')
     parser.add_argument('--heatmap_iters', type=int, default=1, required=False,
                          help='number of iterations heatmap data is saved after, (Default = 1)')
@@ -222,8 +222,11 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
     group_membership = [0.0] * n
     X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 
+    vmin = None
+    vmax = None
+
     while iteration < max_iters:
-        print('iteration: {}'.format(iteration))
+        print('iteration: {}'.format(int(iteration)))
         # get t-1 mixture decisions on X by randomizing on current set of p
         emp_p = gen_a(p[-1], X, y, A, iteration)
         # get the error of the t-1 mixture classifier
@@ -231,18 +234,18 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
         # Average decisions
         A = emp_p[1]
 
-        # TODO: get heatmap working
         # save heatmap every heatmap_iter iterations
-        if (heatmapflag is True) and (iteration % heatmap_iter) == 1:
+        if heatmapflag and (iteration % heatmap_iter) == 0:
+            
             A_heat = A
             # initial heat map
             X_prime_heat = X_prime.iloc[:, 0:2]
-            eta = .05
+            eta = 0.2
+
+            minmax = heatmap.heat_map(X, X_prime_heat, y, A_heat, eta, 'viz/heatmaps/heatmap_iteration_{}'.format(int(iteration)), vmin, vmax)
             if iteration == 1:
-                minimax1 = heatmap.heat_map(X, X_prime, y, p[0].predict(X), eta, 'starting', None, None)
-            else:
-                heatmap.heat_map(X, X_prime_heat, y, A_heat, eta, 'heatmap_iteration_{}'.format(iteration),
-                                 mini=minimax1[0], maxi=minimax1[1])
+                vmin = minmax[0]
+                vmax = minmax[1]
 
         # update FP to get the false positive rate of the mixture classifier
         A_recent = p[-1].predict(X)

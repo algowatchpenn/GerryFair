@@ -43,6 +43,7 @@ def clean_dataset(dataset, attributes, centered):
 
     ## Do not use labels in rest of data
     X = df.loc[:, df.columns != y_col[0]]
+    X = X.loc[:, X.columns != 'Unnamed: 0']
     ## Create X_prime, by getting protected attributes
     sens_cols = [str(c) for c in sens_df.columns if sens_df[c][0] == 1]
     print('sensitive features: {}'.format(sens_cols))
@@ -51,13 +52,16 @@ def clean_dataset(dataset, attributes, centered):
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
 
-    x_prime = df[sens_names]
+    X_prime = df[sens_names]
+
+    #X = X.reset_index(drop=True)
+    #X_prime = X_prime.reset_index(drop=True)
 
     if(centered):
         X = center(X)
-        x_prime = center(x_prime)
+        X_prime = center(X_prime)
 
-    return X, x_prime, y
+    return X, X_prime, y
 
 
 
@@ -110,8 +114,8 @@ if __name__ == "__main__":
     # get command line arguments
     name, dataset, attributes, centered = setup()
     X, X_prime, y = clean_dataset(dataset, attributes, centered)
-    X.to_csv('dataset/' + name + '_features.csv')
-    X_prime.to_csv('dataset/' + name + '_protectedfeatures.csv')
+    X.to_csv('dataset/' + name + '_features.csv', index=False)
+    X_prime.to_csv('dataset/' + name + '_protectedfeatures.csv', index=False)
     y.to_csv('dataset/' + name + '_labels.csv')
 
 
