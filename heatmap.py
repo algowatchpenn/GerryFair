@@ -4,14 +4,12 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-# fig = plt.figure()
-# ax = fig.gca(projection='3d')
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1, projection='3d')
 
 from Reg_Oracle_Fict import *
 from Reg_Oracle_Class import *
 import clean_data
-
-import seaborn as sns
 
 def calc_disp(A_p, X, y_g, X_sens, g):
     """Return the fp disparity in a group g."""
@@ -28,54 +26,46 @@ def calc_disp(A_p, X, y_g, X_sens, g):
     fp_g = np.mean(fp_g)
     return (FP - fp_g) * g_size_0
 
-
-def heat_map(X, X_prime, y, A, eta, plot_name, mini=None, maxi=None):
+def heat_map(X, X_prime, y, A, eta, plot_name, vmin=None, vmax=None):
     columns = [str(c) for c in X_prime.columns]
-    columns.append('gamma-disparity')
-    q = int(1/eta*1/eta)
-    mat = pd.DataFrame(columns=columns, index=range(q))
-    # calculate initial heatmap
+      
+    attribute_1 = np.zeros(int(1/eta))
+    attribute_2 = np.zeros(int(1/eta))
+    disparity = np.zeros((int(1/eta), int(1/eta)))
+
     ind = 0.0
     for i in range(int(1/eta)):
         for j in range(int(1/eta)):
             beta = [-1 + 2*eta*i, -1 + 2*eta*j]
             group = LinearThresh(beta)
-            mat.iloc[int(ind),:] = [beta[0], beta[1], calc_disp(A_p=A, X=X, y_g=y, X_sens=X_prime, g=group)]
             
-            #print(ind/q)
-            ind += 1.0
-    mat_list = pd.DataFrame({c: list(mat[c]) for c in mat.columns})
-    mat_piv = mat_list.pivot(index=mat.columns[0], columns=mat.columns[1], values=mat.columns[2])
-    if mini is None or maxi is None:
-       figure = sns.heatmap(mat_piv, fmt='g')
-    else:
-       figure = sns.heatmap(mat_piv, fmt='g', vmin=mini, vmax=maxi)
-    fig = figure.get_figure()
-    fig.savefig('{}'.format(plot_name))
-    fig.clf()
-    
-    mat_list.to_csv('{}.csv'.format(plot_name))
-    print('zzz: {}'.format(mat_list))
-    
-    #ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)    
-    return [np.min(mat.loc[:, 'gamma-disparity']), np.max(mat.loc[:, 'gamma-disparity']), mat_list]
+            attribute_1[i] = beta[0]
+            attribute_2[j] = beta[1]
+            disparity[i,j] = calc_disp(A_p=A, X=X, y_g=y, X_sens=X_prime, g=group)
 
+    X_plot, Y_plot = np.meshgrid(attribute_1, attribute_2)
 
-
+    ax.set_xlabel(columns[0] + ' coefficient')
+    ax.set_ylabel(columns[1] + ' coefficient')
+    ax.set_zlabel('gamma disparity')
+    ax.plot_surface(X_plot, Y_plot, disparity, cmap=cm.coolwarm, linewidth=0, antialiased=False, vmin=vmin, vmax=vmax)   
+    fig.savefig('{}.png'.format(plot_name))
+    plt.cla()
+    return [np.min(disparity), np.max(disparity)]
 
 if __name__ == "__main__":
 
     # experiments
     C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, plot_name = 100, 2, True, 'communities', 'reg_oracle', 1000, .0001, 'gamma', 'test'
 
-    eta = 0.1
+    eta = 0.02
 
-    # Data Cleaning and Import
+    # Data Cleaning
     f_name = 'clean_{}'.format(dataset)
     clean_the_dataset = getattr(clean_data, f_name)
     X, X_prime, y = clean_the_dataset()
     
-    # subsample
+    # Subsampling
     num = 100
     col = 14
     X = X.iloc[0:num,0:col]
