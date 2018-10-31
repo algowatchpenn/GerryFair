@@ -7,6 +7,7 @@ from sklearn import linear_model
 import random
 import sys
 
+import audit
 import fairness_plots
 import heatmap
 import Reg_Oracle_Class
@@ -55,62 +56,6 @@ def gen_a(q, x, y, A, iter):
     error = np.mean([np.abs(ds[k] - y[k]) for k in range(len(y))])
     return [error, ds]
 
-
-def get_group(A, X, X_sens, y_g, FP):
-    """Given decisions on X, sensitive attributes, labels, and FP rate audit wrt
-        to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
-    """
-
-    A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
-    X_0 = pd.DataFrame([X_sens.iloc[u, :]
-                        for u, s in enumerate(y_g) if s == 0])
-    m = len(A_0)
-    n = float(len(y_g))
-    cost_0 = [0.0] * m
-    cost_1 = -1.0 / n * (FP - A_0)
-    reg0 = linear_model.LinearRegression()
-    reg0.fit(X_0, cost_0)
-    reg1 = linear_model.LinearRegression()
-    reg1.fit(X_0, cost_1)
-    func = Reg_Oracle_Class.RegOracle(reg0, reg1)
-    group_members_0 = func.predict(X_0)
-    err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
-                         for i in range(len(A_0))])
-    # get the false positive rate in group
-    if sum(group_members_0) == 0:
-        fp_group_rate = 0
-    else:
-        fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
-    g_size_0 = np.sum(group_members_0) * 1.0 / n
-    fp_disp = np.abs(fp_group_rate - FP)
-    fp_disp_w = fp_disp * g_size_0
-
-    # negation
-    cost_0_neg = [0.0] * m
-    cost_1_neg = -1.0 / n * (A_0-FP)
-    reg0_neg = linear_model.LinearRegression()
-    reg0_neg.fit(X_0, cost_0_neg)
-    reg1_neg = linear_model.LinearRegression()
-    reg1_neg.fit(X_0, cost_1_neg)
-    func_neg = Reg_Oracle_Class.RegOracle(reg0_neg, reg1_neg)
-    group_members_0_neg = func_neg.predict(X_0)
-    err_group_neg = np.mean(
-        [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
-    if sum(group_members_0_neg) == 0:
-        fp_group_rate_neg = 0
-    else:
-        fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
-    g_size_0_neg = np.sum(group_members_0_neg) * 1.0 / n
-    fp_disp_neg = np.abs(fp_group_rate_neg - FP)
-    fp_disp_w_neg = fp_disp_neg*g_size_0_neg
-
-    # return group
-    if fp_disp_w_neg > fp_disp_w:
-        return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
-    else:
-        return [func, fp_disp_w, fp_disp, err_group, 1]
-
-
 def learner_costs(c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
     """Recursively update the costs from incorrectly predicting 1 for the learner."""
     # store whether FP disparity was + or -
@@ -147,20 +92,6 @@ def learner_br(c_1t, X, y):
     reg1.fit(X, c_1)
     func = Reg_Oracle_Class.RegOracle(reg0, reg1)
     return func
-
-# not currently printed
-def lagrangian_value(groups, yhat, C, FP, X, X_prime, y, iteration):
-    """Compute the lagrangian value wrt to a learner yhat and found groups in groups."""
-    lagrange = 0
-    n = len(y)
-    err_pt = np.mean([np.abs(yhat[r]-y[r]) for r in range(n)])
-    for g in groups:
-        g_mems = g.predict(X_prime)
-        fp_g = np.mean([yhat[i] for i in range(n) if y[i] == 0 and g_mems[i] == 1])
-        fp_disp = fp_g-FP
-        group_size_0 = np.sum(f[0].predict(X_0)) * (1.0/n)
-        lagrange += C*1.0/(iteration-1.0)*fp_disp*group_size_0
-    return lagrange + err_pt
 
 # not currently printed out
 def calc_unfairness(A, X_prime, y_g, FP_p):
@@ -253,7 +184,7 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
         FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
         FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
         # dual player best responds to strategy up to t-1
-        f = get_group(A, X, X_prime, y, FP)
+        f = audit.get_group(A, X, X_prime, y, FP)
         # flag whether FP disparity was positive or negative
         pos_neg = f[4]
         fp_disparity = f[1]
@@ -269,8 +200,6 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
         p_t = learner_br(c_1t, X, y)
         A_t = p_t.predict(X)
         FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
-        # get lagrangian value which primal player is minimizing
-        # lagrange = lagrangian_value(groups, A_t, C, FP_t, X, X_prime, y, iteration)
 
         # append new group, new p, fp_diff of group found, coefficients, group size
         groups.append(f[0])
@@ -285,9 +214,7 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
                     err,
                     fp_diff_t[0],
                     group_size_0))
-        # get unfairness on marginal subgroups
-        # unfairness = calc_unfairness(A, X_prime, y, FP)
-        # print
+
         if printflag:
             print(
                 'ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err),
@@ -299,12 +226,10 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
                                                                                                         cum_group_mems[
                                                                                                             -1] / float(
                                                                                                             n))))
-            group_coef = f[0].b0.coef_ - f[0].b1.coef_
-            # print('YY coefficients of g_t: {}'.format(list(group_coef)))
+
 
         # update costs: the primal player best responds
         c_1t = learner_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
-        # print('UU learner costs: {}'.format(np.unique(c_1t)))
         sys.stdout.flush()
         iteration += 1
         iteration = float(iteration)
@@ -317,13 +242,6 @@ def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_
 if __name__ == "__main__":
     # get command line arguments
     C, printflag, heatmapflag, heatmap_iter, dataset, max_iters, gamma, plots = setup() #sys.argv[1:]
-    # printflag = sys.argv[1].lower() == 'true'
-    # heatmapflag = sys.argv[2].lower() == 'true'
-    # heatmap_iter = int(heatmap_iter)
-    # C = float(C)
-    # dataset = str(dataset)
-    # max_iters = int(max_iters)
-    # gamma = float(gamma)
     random.seed(1)
 
     # Data Cleaning and Import

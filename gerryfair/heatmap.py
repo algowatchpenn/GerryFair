@@ -7,7 +7,6 @@ from matplotlib import cm
 
 from Reg_Oracle_Fict import *
 from Reg_Oracle_Class import *
-import clean_data
 
 def calc_disp(A_p, X, y_g, X_sens, g):
     """Return the fp disparity in a group g."""
