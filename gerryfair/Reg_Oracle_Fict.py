@@ -1,4 +1,3 @@
-
 # Version Created: 20 April 2018
 import argparse
 import numpy as np
@@ -197,7 +196,7 @@ def calc_unfairness(A, X_prime, y_g, FP_p):
 
 # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
 # Output: for each iteration, the error and the fp difference - heatmap can also be produced
-def fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_iters, gamma):
+def fictitious_play(X, X_prime, y, C=10, printflag=False, heatmapflag=False, heatmap_iter=10, max_iters=10, gamma=0.01):
     # subsample
     # if num > 0:
     #     X = X.iloc[0:num, 0:col]
@@ -342,17 +341,21 @@ if __name__ == "__main__":
 
 
     # TODO: Decide on functionality for how pareto curve should be accessed.
-    # if plots == 'Pareto':
-    #     ## Read string of gamma values into a list
-    #     gamma_list = [float(item) for item in pareto_gammas.split(',')]
-    #
-    #     ## Store errors and fp over time for each gamma
-    #     all_errors = []
-    #     all_fp = []
-    #     for g in gamma_list:
-    #         errors_gt, fp_diff_gt = fictitious_play(X, X_prime, y, C, printflag, heatmapflag, heatmap_iter, max_iters,g)
-    #
-    #         all_errors.append(errors_gt)
-    #         all_fp.append(fp_diff_gt)
-    #
-    #     fairness_plots.plot_pareto(all_errors, all_fp)
+
+def pareto(X, X_prime, y, gamma_list, C=10, max_iters=10):
+    # Store errors and fp over time for each gamma
+    all_errors = []
+    all_fp = []
+    for g in gamma_list:
+        errors_gt, fp_diff_gt = fictitious_play(X, X_prime, y, C=C, max_iters=max_iters, gamma=g)
+
+        all_errors.append(errors_gt[-1])
+        all_fp.append(fp_diff_gt[-1])
+    print(all_errors)
+    print(all_fp)
+
+    #fairness_plots.plot_pareto(all_errors, all_fp)
+
+
+
+
