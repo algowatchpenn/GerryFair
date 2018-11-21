@@ -11,8 +11,7 @@ import fairness_plots
 import heatmap
 import Reg_Oracle_Class
 import clean
-
-
+import matplotlib.pyplot as plt
 
 
 # Helper Functions
@@ -170,7 +169,7 @@ def fictitious_play(X, X_prime, y, C=10, printflag=False, heatmapflag=False, hea
             A_heat = A
             # initial heat map
             X_prime_heat = X_prime.iloc[:, 0:2]
-            eta = 0.2
+            eta = 0.1
 
             minmax = heatmap.heat_map(X, X_prime_heat, y, A_heat, eta, 'viz/heatmaps/heatmap_iteration_{}'.format(int(iteration)), vmin, vmax)
             if iteration == 1:
@@ -266,14 +265,12 @@ def pareto(X, X_prime, y, gamma_list, C=10, max_iters=10):
     all_fp = []
     for g in gamma_list:
         errors_gt, fp_diff_gt = fictitious_play(X, X_prime, y, C=C, max_iters=max_iters, gamma=g)
+        print(errors_gt, fp_diff_gt)
 
         all_errors.append(errors_gt[-1])
         all_fp.append(fp_diff_gt[-1])
-    print(all_errors)
-    print(all_fp)
+    return (all_errors, all_fp)
+    #plt.plot(all_errors, all_fp)
+    #plt.show()
 
     #fairness_plots.plot_pareto(all_errors, all_fp)
-
-
-
-

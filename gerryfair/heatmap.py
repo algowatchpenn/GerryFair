@@ -49,6 +49,7 @@ def heat_map(X, X_prime, y, A, eta, plot_name, vmin=None, vmax=None):
     ax.set_ylabel(columns[1] + ' coefficient')
     ax.set_zlabel('gamma disparity')
     ax.plot_surface(X_plot, Y_plot, disparity, cmap=cm.coolwarm, linewidth=0, antialiased=False, vmin=vmin, vmax=vmax)   
+    ax.set_zlim3d([-0.035, 0.035])
     fig.savefig('{}.png'.format(plot_name))
     plt.cla()
     return [np.min(disparity), np.max(disparity)]
