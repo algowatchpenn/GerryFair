@@ -12,24 +12,20 @@ class Model:
     """Model object for fair learning and classification"""
     
     # Fictitious Play Algorithm
-
     # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
     # Output: for each iteration, the error and the fp difference - heatmap can also be produced
-    def fictitious_play(self,
+    def __fictitious_play(self,
                         X,
                         X_prime,
-                        y,
-                        C=10, 
-                        printflag=False,
-                        heatmapflag=False,
-                        heatmap_iter=10,
-                        max_iters=10,
-                        gamma=0.01):
+                        y):
 
         # defining variables and data structures for algorithm
+        learner = Learner(X, y)
+        auditor = Auditor()
+
         n = X.shape[0]
         m = len([s for s in y if s == 0])
-        p = [self.learner.best_response([1.0 / n] * m, X, y)]
+        p = [learner.best_response([1.0 / n] * m, X, y)]
         iteration = 1
         errors_t = []
         fp_diff_t = []
@@ -48,10 +44,10 @@ class Model:
         vmin = None
         vmax = None
 
-        while iteration < max_iters:
+        while iteration < self.max_iters:
             print('iteration: {}'.format(int(iteration)))
             # get t-1 mixture decisions on X by randomizing on current set of p
-            emp_p = self.learner.generate_predictions(p[-1], X, y, A, iteration)
+            emp_p = learner.generate_predictions(p[-1], X, y, A, iteration)
             # get the error of the t-1 mixture classifier
             err = emp_p[0]
             # Average decisions
@@ -64,7 +60,7 @@ class Model:
             FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
             
             # dual player best responds to strategy up to t-1
-            f = self.auditor.get_group(A, X, X_prime, y, FP)
+            f = auditor.get_group(A, X_prime, y, FP)
             # flag whether FP disparity was positive or negative
             pos_neg = f[4]
             fp_disparity = f[1]
@@ -77,7 +73,7 @@ class Model:
             cum_group_mems.append(group_members_t)
 
             # compute learner's best response to the CSC problem
-            p_t = self.learner.best_response(c_1t, X, y)
+            p_t = learner.best_response(c_1t, X, y)
             A_t = p_t.predict(X)
             FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
 
@@ -97,7 +93,7 @@ class Model:
                         fp_diff_t[0],
                         group_size_0))
 
-            if printflag:
+            if self.printflag:
                 print(
                     'ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err),
                                                                                                         '{:f}'.format(
@@ -109,7 +105,7 @@ class Model:
                                                                                                                 -1] / float(
                                                                                                                 n))))
             # save heatmap every heatmap_iter iterations
-            if heatmapflag and (iteration % heatmap_iter) == 0:
+            if self.heatmapflag and (iteration % self.heatmap_iter) == 0:
                 
                 A_heat = A
                 # initial heat map
@@ -123,7 +119,7 @@ class Model:
 
 
             # update costs: the primal player best responds
-            c_1t = self.auditor.update_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
+            c_1t = auditor.update_costs(c_1t, f, X_prime, y, self.C, iteration, fp_disparity, self.gamma)
             iteration += 1    
 
         self.classifiers = p
@@ -141,39 +137,67 @@ class Model:
                 y_hat = np.add(y_hat, new_preds)
         return y_hat
 
-    def train(self, alg="fict"):
+    def train(self, X, X_prime, y, alg="fict"):
         if alg == "fict":
-            err, fp_diff = self.fictitious_play(self.X, self.X_prime, self.y)
+            err, fp_diff = self.__fictitious_play(X, X_prime, y)
             return err, fp_diff
         else:
             print("Specified algorithm is invalid")
             return
 
+    ''' A method to switch the options before training'''
+    def set_options(self, C=None,
+                        printflag=None,
+                        heatmapflag=None,
+                        heatmap_iter=None,
+                        max_iters=None,
+                        gamma=None):
+        if C:
+            self.C = C
+        if printflag:
+            self.printflag = printflag
+        if heatmapflag:
+            self.heatmapflag = heatmapflag
+        if heatmap_iter:
+            self.heatmap_iter = heatmap_iter
+        if max_iters:
+            self.max_iters = max_iters
+        if gamma:
+            self.gamma = gamma
 
-    def __init__(self, X, X_prime, y):
+    def __init__(self, C=10,
+                        printflag=False,
+                        heatmapflag=False,
+                        heatmap_iter=10,
+                        max_iters=10,
+                        gamma=0.01):
+        self.C = C
+        self.printflag = printflag
+        self.heatmapflag = heatmapflag
+        self.heatmap_iter = heatmap_iter
+        self.max_iters = max_iters
+        self.gamma = gamma
+
+class Learner:
+    def __init__(self, X, y):
         self.X = X
-        self.X_prime = X_prime
         self.y = y
-        self.learner = Learner()
-        self.auditor = Auditor()
-        self.train("fict")
 
-class Learner:    
-    def best_response(self, c_1t, X, y):
+    def best_response(self, c_1t):
         """Solve the CSC problem for the learner."""
-        n = len(y)
+        n = len(self.y)
         c_1t_new = c_1t[:]
         c_0 = [0.0] * n
         c_1 = []
         for r in range(n):
-            if y[r] == 1:
+            if self.y[r] == 1:
                 c_1.append((-1.0/n))
             else:
                 c_1.append(c_1t_new.pop(0))
         reg0 = linear_model.LinearRegression()
-        reg0.fit(X, c_0)
+        reg0.fit(self.X, c_0)
         reg1 = linear_model.LinearRegression()
-        reg1.fit(X, c_1)
+        reg1.fit(self.X, c_1)
         func = Reg_Oracle_Class.RegOracle(reg0, reg1)
         return func
 
@@ -186,13 +210,13 @@ class Learner:
     # iter: the iteration
     # Outputs:
     # error: the error of the average classifier found thus far (incorporating q)
-    def generate_predictions(self, q, x, y, A, iteration):
+    def generate_predictions(self, q, A, iteration):
         """Return the classifications of the average classifier at time iter."""
 
-        new_preds = np.multiply(1.0 / iteration, q.predict(x))
+        new_preds = np.multiply(1.0 / iteration, q.predict(self.X))
         ds = np.multiply((iteration - 1.0) / iteration, A)
         ds = np.add(ds, new_preds)
-        error = np.mean([np.abs(ds[k] - y[k]) for k in range(len(y))])
+        error = np.mean([np.abs(ds[k] - self.y[k]) for k in range(len(self.y))])
         return [error, ds]
 
 class Auditor:
@@ -215,8 +239,8 @@ class Auditor:
             c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
         return c_1
 
-    def get_group(self, A, X, X_sens, y_g, FP):
-        """Given decisions on X, sensitive attributes, labels, and FP rate audit wrt
+    def get_group(self, A, X_sens, y_g, FP):
+        """Given decisions on sensitive attributes, labels, and FP rate audit wrt
             to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
         """
 
@@ -269,11 +293,11 @@ class Auditor:
         else:
             return [func, fp_disp_w, fp_disp, err_group, 1]
 
-    def audit(self, predictions, X, X_prime, y):
-        """Takes in predictions on dataset (X, X',y) and prints gamma-unfairness,
+    def audit(self, predictions, X_prime, y):
+        """Takes in predictions on dataset (X',y) and prints gamma-unfairness,
         fp disparity, group size, group coefficients, and sensitive column names.
         """
         FP = np.mean([p for i,p in enumerate(predictions) if y[i] == 0])
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = get_group(predictions, X_sens=X_prime, X=X, y_g=y, FP=FP)
+        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = get_group(predictions, X_sens=X_prime, y_g=y, FP=FP)
 
-        return gamma_unfair
+        return aud_group, gamma_unfair
