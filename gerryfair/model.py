@@ -25,7 +25,7 @@ class Model:
 
         n = X.shape[0]
         m = len([s for s in y if s == 0])
-        p = [learner.best_response([1.0 / n] * m, X, y)]
+        p = [learner.best_response([1.0 / n] * m)]
         iteration = 1
         errors_t = []
         fp_diff_t = []
@@ -73,7 +73,7 @@ class Model:
             cum_group_mems.append(group_members_t)
 
             # compute learner's best response to the CSC problem
-            p_t = learner.best_response(c_1t, X, y)
+            p_t = learner.best_response(c_1t)
             A_t = p_t.predict(X)
             FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
 
