@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from sklearn import linear_model
 import random
-import gerryfair.audit
 import gerryfair.fairness_plots
 import gerryfair.heatmap
 from gerryfair.reg_oracle_class import RegOracle
@@ -112,7 +111,7 @@ class Model:
                 X_prime_heat = X_prime.iloc[:, 0:2]
                 eta = 0.1
 
-                minmax = heatmap.heat_map(X, X_prime_heat, y, A_heat, eta, 'viz/heatmaps/heatmap_iteration_{}'.format(iteration), vmin, vmax)
+                minmax = heatmap.heat_map(X, X_prime_heat, y, A_heat, eta, self.heatmap_path + '/heatmap_iteration_{}'.format(iteration), vmin, vmax)
                 if iteration == 1:
                     vmin = minmax[0]
                     vmax = minmax[1]
@@ -149,6 +148,7 @@ class Model:
                         printflag=None,
                         heatmapflag=None,
                         heatmap_iter=None,
+                        heatmap_path=None,
                         max_iters=None,
                         gamma=None):
         if C:
@@ -159,6 +159,8 @@ class Model:
             self.heatmapflag = heatmapflag
         if heatmap_iter:
             self.heatmap_iter = heatmap_iter
+        if heatmap_path:
+            self.heatmap_path = heatmap_path
         if max_iters:
             self.max_iters = max_iters
         if gamma:
@@ -168,12 +170,14 @@ class Model:
                         printflag=False,
                         heatmapflag=False,
                         heatmap_iter=10,
+                        heatmap_path='.',
                         max_iters=10,
                         gamma=0.01):
         self.C = C
         self.printflag = printflag
         self.heatmapflag = heatmapflag
         self.heatmap_iter = heatmap_iter
+        self.heatmap_path = heatmap_path
         self.max_iters = max_iters
         self.gamma = gamma
 
