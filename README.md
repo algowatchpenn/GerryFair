@@ -130,9 +130,7 @@ python Audit.py -h
 
 
 ## License
-* Maintained by: Seth Neel (sethneel@wharton.upenn.edu)
+* Maintained by: Seth Neel (sethneel@wharton.upenn.edu), Will Brown, Adel Boyarsky, Arnab Sarker, Aaron Hallac.
 * Property of: Michael Kearns, Seth Neel, Aaron Roth, Z. Steven Wu.
 
-## Acknowledgments
 
-* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf, whose algorithm/code is in the `fairlearn` folder, and is audited in `Audit.py`.
