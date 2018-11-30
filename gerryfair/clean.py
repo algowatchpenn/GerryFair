@@ -106,18 +106,6 @@ def get_data(dataset):
     return X, X_prime, y
 
 
-'''
-This file is designed to take in a raw dataset, one hot encode it, center it (if desired), and then output the clean
-data sets to be used in Reg_Oracle_Fict.py
-'''
-if __name__ == "__main__":
-    # get command line arguments
-    name, dataset, attributes, centered = setup()
-    X, X_prime, y = clean_dataset(dataset, attributes, centered)
-    X.to_csv('dataset/' + name + '_features.csv', index=False)
-    X_prime.to_csv('dataset/' + name + '_protectedfeatures.csv', index=False)
-    y.to_csv('dataset/' + name + '_labels.csv')
-
 
 
 

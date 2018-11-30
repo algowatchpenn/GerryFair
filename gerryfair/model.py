@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from sklearn import linear_model
 import random
-import audit
-import fairness_plots
-import heatmap
-import Reg_Oracle_Class
+import gerryfair.audit
+import gerryfair.fairness_plots
+import gerryfair.heatmap
+from gerryfair.reg_oracle_class import RegOracle
 import matplotlib.pyplot as plt
 
 class Model:
@@ -47,7 +47,7 @@ class Model:
         while iteration < self.max_iters:
             print('iteration: {}'.format(int(iteration)))
             # get t-1 mixture decisions on X by randomizing on current set of p
-            emp_p = learner.generate_predictions(p[-1], X, y, A, iteration)
+            emp_p = learner.generate_predictions(p[-1], A, iteration)
             # get the error of the t-1 mixture classifier
             err = emp_p[0]
             # Average decisions
@@ -197,7 +197,7 @@ class Learner:
         reg0.fit(self.X, c_0)
         reg1 = linear_model.LinearRegression()
         reg1.fit(self.X, c_1)
-        func = Reg_Oracle_Class.RegOracle(reg0, reg1)
+        func = RegOracle(reg0, reg1)
         return func
 
 
@@ -254,7 +254,7 @@ class Auditor:
         reg0.fit(X_0, cost_0)
         reg1 = linear_model.LinearRegression()
         reg1.fit(X_0, cost_1)
-        func = Reg_Oracle_Class.RegOracle(reg0, reg1)
+        func = RegOracle(reg0, reg1)
         group_members_0 = func.predict(X_0)
         err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
                              for i in range(len(A_0))])
@@ -274,7 +274,7 @@ class Auditor:
         reg0_neg.fit(X_0, cost_0_neg)
         reg1_neg = linear_model.LinearRegression()
         reg1_neg.fit(X_0, cost_1_neg)
-        func_neg = Reg_Oracle_Class.RegOracle(reg0_neg, reg1_neg)
+        func_neg = RegOracle(reg0_neg, reg1_neg)
         group_members_0_neg = func_neg.predict(X_0)
         err_group_neg = np.mean(
             [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
