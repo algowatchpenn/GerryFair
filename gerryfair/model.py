@@ -121,7 +121,6 @@ class Model:
                     vmin = minmax[0]
                     vmax = minmax[1]
 
-
             # update costs: the primal player best responds
             c_1t = self.auditor.update_costs(c_1t, f, X_prime, y, C, iteration, fp_disparity, gamma)
             iteration += 1    

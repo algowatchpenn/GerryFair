@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class RegOracle:
     """Class RegOracle, linear threshold classifier."""
     def __init__(self, b0, b1):
@@ -21,7 +20,6 @@ class RegOracle:
             y_i = int(c_1 < c_0)
             y.append(y_i)
         return y
-
 
 class RandomLinearThresh:
     """Class random hyperplane classifier."""

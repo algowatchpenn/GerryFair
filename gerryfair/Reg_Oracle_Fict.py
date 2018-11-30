@@ -266,11 +266,7 @@ def pareto(X, X_prime, y, gamma_list, C=10, max_iters=10):
     for g in gamma_list:
         errors_gt, fp_diff_gt = fictitious_play(X, X_prime, y, C=C, max_iters=max_iters, gamma=g)
         print(errors_gt, fp_diff_gt)
-
         all_errors.append(errors_gt[-1])
         all_fp.append(fp_diff_gt[-1])
     return (all_errors, all_fp)
-    #plt.plot(all_errors, all_fp)
-    #plt.show()
 
-    #fairness_plots.plot_pareto(all_errors, all_fp)
