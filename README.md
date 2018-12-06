@@ -132,4 +132,5 @@ python Audit.py -h
 ## License
 * Maintained by: @sethneel, @wibrown, @arnabsarker, @adel-boyarsky, @hallaca
 * Property of the AlgoWatch Team: Michael Kearns, Aaron Roth, Steven Wu, Seth Neel, William Brown, Arnab Sarker, Adel Boyarsky, Aaron Hallac.
+* Contact: sethneel@wharton.upenn.edu
 
