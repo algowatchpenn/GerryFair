@@ -22,7 +22,7 @@ Fairness Data Cleaning
 
 optional arguments:
   -h, --help            show this help message and exit
-  -n NAME, --name NAME  name of the to store the new datasets (Required)
+  -n NAME, --name NAME  name of the file to store the new datasets (Required)
   -d DATASET, --dataset DATASET
                         name of the original dataset file (Required)
   -a ATTRIBUTES, --attributes ATTRIBUTES
