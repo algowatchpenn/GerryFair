@@ -51,29 +51,3 @@ def heat_map(X, X_prime, y, A, eta, plot_name, vmin=None, vmax=None):
     fig.savefig('{}.png'.format(plot_name))
     plt.cla()
     return [np.min(disparity), np.max(disparity)]
-
-if __name__ == "__main__":
-
-    # experiments
-    C, num_sens, printflag, dataset, oracle, max_iters, gamma, fairness_def, plot_name = 100, 2, True, 'communities', 'reg_oracle', 1000, .0001, 'gamma', 'test'
-
-    eta = 0.02
-
-    # Data Cleaning
-    f_name = 'clean_{}'.format(dataset)
-    clean_the_dataset = getattr(clean_data, f_name)
-    X, X_prime, y = clean_the_dataset()
-    
-    # Subsampling
-    num = 100
-    col = 14
-    X = X.iloc[0:num,0:col]
-    y = y[0:num]
-    X_prime = X_prime.iloc[0:num, 0:num_sens]
-
-    # get base classifier
-    n = X.shape[0]
-    m = len([s for s in y if s == 0])
-    p = learner_br([1.0 / n] * m, X, y)
-    A = p.predict(X)
-    heat_map(X, X_prime, y, A, eta, plot_name)
