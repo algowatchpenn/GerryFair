@@ -13,7 +13,7 @@ class Model:
     # Fictitious Play Algorithm
     # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
     # Output: for each iteration, the error and the fp difference - heatmap can also be produced
-    def __fictitious_play(self,
+    def _fictitious_play(self,
                         X,
                         X_prime,
                         y):
@@ -133,11 +133,30 @@ class Model:
                 y_hat = new_preds
             else:
                 y_hat = np.add(y_hat, new_preds)
-        return y_hat
+        return pd.DataFrame(y_hat)
+
+    def pareto(self, X, X_prime, y, gamma_list, C=10, max_iters=10):
+        # Store errors and fp over time for each gamma
+        all_errors = []
+        all_fp = []
+        self.C = C
+        self.max_iters = max_iters
+        for g in gamma_list:
+            self.gamma = g
+            errors_gt, fp_diff_gt = self._fictitious_play(X, X_prime, y)
+            print(errors_gt, fp_diff_gt)
+            all_errors.append(np.mean(errors_gt))
+            all_fp.append(np.mean(fp_diff_gt))
+        plt.plot(all_errors, all_fp)
+        plt.xlabel('error')
+        plt.ylabel('unfairness (fp_diff*size)')
+        plt.title('error vs. unfairness: C = {}, max_iters = {}'.format(C, max_iters))
+        plt.show()
+        return (all_errors, all_fp)
 
     def train(self, X, X_prime, y, alg="fict"):
         if alg == "fict":
-            err, fp_diff = self.__fictitious_play(X, X_prime, y)
+            err, fp_diff = self._fictitious_play(X, X_prime, y)
             return err, fp_diff
         else:
             print("Specified algorithm is invalid")
@@ -300,7 +319,9 @@ class Auditor:
         """Takes in predictions on dataset (X',y) and prints gamma-unfairness,
         fp disparity, group size, group coefficients, and sensitive column names.
         """
+        if isinstance(predictions, pd.DataFrame):
+            predictions = predictions.values
         FP = np.mean([p for i,p in enumerate(predictions) if y[i] == 0])
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = get_group(predictions, X_sens=X_prime, y_g=y, FP=FP)
+        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, X_sens=X_prime, y_g=y, FP=FP)
 
-        return aud_group, gamma_unfair
+        return aud_group.predict(X_prime), gamma_unfair
