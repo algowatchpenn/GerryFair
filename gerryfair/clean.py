@@ -19,13 +19,10 @@ def setup():
 
 '''
 Clean a dataset, given the filename for the dataset and the filename for the attributes.
-
 Dataset: Filename for dataset. The dataset should be formatted such that categorical variables use one-hot encoding
 and the label should be 0/1
-
 Attributes: Filename for the attributes of the dataset. The file should have each column name in a list, and under this
 list should have 0 for an unprotected attribute, 1 for a protected attribute, and 2 for the attribute of the label.
-
 '''
 def clean_dataset(dataset, attributes, centered):
     df = pd.read_csv(dataset)
@@ -104,8 +101,3 @@ def get_data(dataset):
     y = pd.read_csv('dataset/' + dataset + '_labels.csv', names=['index', 'label'])
     y = y['label']
     return X, X_prime, y
-
-
-
-
-
