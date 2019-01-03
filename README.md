@@ -37,6 +37,4 @@ For demonstration of the GerryFair API, please see our [jupyter notebook](./Gerr
 * Property of: Michael Kearns, Seth Neel, Aaron Roth, Z. Steven Wu.
 * For questions or concerns, contact Algowatch Project (algowatchproject@gmail.com).
 
-## Acknowledgments
 
-* Thank you to the authors of: http://fatml.mysociety.org/media/documents/reductions_approach_to_fair_classification.pdf, whose algorithm/code is in the `fairlearn` folder, and is audited in `audit.py`.
