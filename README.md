@@ -32,6 +32,7 @@ For demonstration of the GerryFair API, please see our [jupyter notebook](./Gerr
 
 
 ## License
+* GerryFair/license.txt
 * Maintained by: Seth Neel (sethneel@wharton.upenn.edu), William Brown, Adel Boyarsky, Arnab Sarker, Aaron Hallac. 
 * Property of: Michael Kearns, Seth Neel, Aaron Roth, Z. Steven Wu.
 * For questions or concerns, contact Algowatch Project (algowatchproject@gmail.com).
