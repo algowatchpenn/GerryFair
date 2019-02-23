@@ -12,7 +12,7 @@ class Model:
     
     # Fictitious Play Algorithm
     # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
-    # Output: for each iteration, the error and the fp difference - heatmap can also be produced
+    # Output: for each iteration the error and fairness violation - heatmap can also be produced
     def _fictitious_play(self,
                         X,
                         X_prime,
@@ -33,7 +33,7 @@ class Model:
         p = [learner.best_response(costs_0, costs_1)]
         iteration = 1
         errors_t = []
-        fp_diff_t = []
+        fairness_violations_t = []
         coef_t = []
         size_t = []
         groups = []
@@ -82,10 +82,10 @@ class Model:
             A_t = p_t.predict(X)
             FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
 
-            # append new group, new p, fp_diff of group found, coefficients, group size
+            # append new group, new p, fairness_violations of group found, coefficients, group size
             groups.append(f[0])
             p.append(p_t)
-            fp_diff_t.append(np.abs(f[1]))
+            fairness_violations_t.append(np.abs(f[1]))
             errors_t.append(err)
             coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
 
@@ -95,7 +95,7 @@ class Model:
                 print(
                     'most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(
                         err,
-                        fp_diff_t[0],
+                        fairness_violations_t[0],
                         group_size_0))
 
             if self.printflag:
@@ -127,7 +127,7 @@ class Model:
             iteration += 1    
 
         self.classifiers = p
-        return errors_t, fp_diff_t
+        return errors_t, fairness_violations_t
 
     def predict(self, X):
         num_classifiers = len(self.classifiers)
@@ -149,21 +149,21 @@ class Model:
         self.max_iters = max_iters
         for g in gamma_list:
             self.gamma = g
-            errors_gt, fp_diff_gt = self._fictitious_play(X, X_prime, y)
-            print(errors_gt, fp_diff_gt)
+            errors_gt, fairness_violations_gt = self._fictitious_play(X, X_prime, y)
+            print(errors_gt, fairness_violations_gt)
             all_errors.append(np.mean(errors_gt))
-            all_fp.append(np.mean(fp_diff_gt))
-        plt.plot(all_errors, all_fp)
+            all_violations.append(np.mean(fairness_violations_gt))
+        plt.plot(all_errors, all_violations)
         plt.xlabel('error')
-        plt.ylabel('unfairness (fp_diff*size)')
+        plt.ylabel('unfairness (fairness_violations*size)')
         plt.title('error vs. unfairness: C = {}, max_iters = {}'.format(C, max_iters))
         plt.show()
-        return (all_errors, all_fp)
+        return (all_errors, all_violations)
 
     def train(self, X, X_prime, y, alg="fict"):
         if alg == "fict":
-            err, fp_diff = self._fictitious_play(X, X_prime, y)
-            return err, fp_diff
+            err, fairness_violations = self._fictitious_play(X, X_prime, y)
+            return err, fairness_violations
         else:
             print("Specified algorithm is invalid")
             return
@@ -271,7 +271,6 @@ class Auditor:
         """Given decisions on sensitive attributes, labels, and FP rate audit wrt
             to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
         """
-
         A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
         X_0 = pd.DataFrame([X_sens.iloc[u, :]
                             for u, s in enumerate(y_g) if s == 0])
