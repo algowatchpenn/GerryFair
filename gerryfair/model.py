@@ -24,7 +24,13 @@ class Model:
 
         n = X.shape[0]
         m = len([s for s in y if s == 0])
-        p = [learner.best_response([1.0 / n] * m)]
+
+
+        # set default costs
+        costs_0 = [0.0] * n
+        costs_1 = [1.0 / n] * n
+
+        p = [learner.best_response(costs_0, costs_1)]
         iteration = 1
         errors_t = []
         fp_diff_t = []
@@ -33,7 +39,6 @@ class Model:
         groups = []
         cum_group_mems = []
         m = len([s for s in y if s == 0])
-        c_1t = [1.0 / n] * m
         FP = 0
         A = [0.0] * n
         group_membership = [0.0] * n
@@ -72,7 +77,8 @@ class Model:
             cum_group_mems.append(group_members_t)
 
             # compute learner's best response to the CSC problem
-            p_t = learner.best_response(c_1t)
+
+            p_t = learner.best_response(costs_0, costs_1)
             A_t = p_t.predict(X)
             FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
 
@@ -117,7 +123,7 @@ class Model:
                     vmax = minmax[1]
 
             # update costs: the primal player best responds
-            c_1t = auditor.update_costs(c_1t, f, X_prime, y, self.C, iteration, fp_disparity, self.gamma)
+            costs_1 = auditor.update_costs(costs_1, f, X_prime, y, self.C, iteration, fp_disparity, self.gamma)
             iteration += 1    
 
         self.classifiers = p
@@ -169,7 +175,8 @@ class Model:
                         heatmap_iter=None,
                         heatmap_path=None,
                         max_iters=None,
-                        gamma=None):
+                        gamma=None,
+                        fairness_def=None):
         if C:
             self.C = C
         if printflag:
@@ -184,6 +191,8 @@ class Model:
             self.max_iters = max_iters
         if gamma:
             self.gamma = gamma
+        if fairness_def:
+            self.fairness_def = fairness_def
 
     def __init__(self, C=10,
                         printflag=False,
@@ -191,7 +200,8 @@ class Model:
                         heatmap_iter=10,
                         heatmap_path='.',
                         max_iters=10,
-                        gamma=0.01):
+                        gamma=0.01,
+                        fairness_def='FP'):
         self.C = C
         self.printflag = printflag
         self.heatmapflag = heatmapflag
@@ -199,27 +209,20 @@ class Model:
         self.heatmap_path = heatmap_path
         self.max_iters = max_iters
         self.gamma = gamma
+        self.fairness_def = fairness_def
 
 class Learner:
     def __init__(self, X, y):
         self.X = X
         self.y = y
 
-    def best_response(self, c_1t):
+    def best_response(self, costs_0, costs_1):
         """Solve the CSC problem for the learner."""
-        n = len(self.y)
-        c_1t_new = c_1t[:]
-        c_0 = [0.0] * n
-        c_1 = []
-        for r in range(n):
-            if self.y[r] == 1:
-                c_1.append((-1.0/n))
-            else:
-                c_1.append(c_1t_new.pop(0))
+
         reg0 = linear_model.LinearRegression()
-        reg0.fit(self.X, c_0)
+        reg0.fit(self.X, costs_0)
         reg1 = linear_model.LinearRegression()
-        reg1.fit(self.X, c_1)
+        reg1.fit(self.X, costs_1)
         func = RegOracle(reg0, reg1)
         return func
 
@@ -250,15 +253,18 @@ class Auditor:
         X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
         g_members = f[0].predict(X_0_prime)
         m = len(c_1)
-        n = float(len(y))
+        n = len(y)
         g_weight_0 = np.sum(g_members)*(1.0/float(m))
-        for t in range(m):
-            new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight_0 - g_members[t])
-            if np.abs(fp_disp) < gamma:
-                if t == 0:
-                    print('barrier')
-                new_group_cost = 0
-            c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
+        for i in range(n):
+            in_group_count = 0
+            if y[i] == 0:
+                new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight_0 - g_members[in_group_count])
+                if np.abs(fp_disp) < gamma:
+                    new_group_cost = 0
+                c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
+                in_group_count += 1
+            else:
+                c_1[i] = -1.0/n
         return c_1
 
     def get_group(self, A, X_sens, y_g, FP):
