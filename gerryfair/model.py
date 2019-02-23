@@ -20,11 +20,10 @@ class Model:
 
         # defining variables and data structures for algorithm
         learner = Learner(X, y)
-        auditor = Auditor()
+        auditor = Auditor(X_prime, y, self.fairness_def)
 
         n = X.shape[0]
         m = len([s for s in y if s == 0])
-
 
         # set default costs
         costs_0 = [0.0] * n
@@ -39,8 +38,8 @@ class Model:
         groups = []
         cum_group_mems = []
         m = len([s for s in y if s == 0])
-        FP = 0
-        A = [0.0] * n
+        metric_baseline = 0
+        predictions = [0.0] * n
         group_membership = [0.0] * n
         X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 
@@ -51,23 +50,22 @@ class Model:
         while iteration < self.max_iters:
             print('iteration: {}'.format(int(iteration)))
             # get t-1 mixture decisions on X by randomizing on current set of p
-            emp_p = learner.generate_predictions(p[-1], A, iteration)
+            emp_p = learner.generate_predictions(p[-1], predictions, iteration)
             # get the error of the t-1 mixture classifier
             err = emp_p[0]
             # Average decisions
-            A = emp_p[1]
+            predictions = emp_p[1]
 
             # update FP to get the false positive rate of the mixture classifier
-            A_recent = p[-1].predict(X)
-            # FP rate of t-1 mixture on new group g_t
-            FP_recent = np.mean([A_recent[i] for i, c in enumerate(y) if c == 0])
-            FP = ((iteration - 1.0) / iteration) * FP + FP_recent * (1.0 / iteration)
+            predictions_recent = p[-1].predict(X)
+
+            # fairness metric baseline rate of t-1 mixture on new group g_t
+            metric_baseline_recent = self.get_baseline(y, predictions) 
+            metric_baseline = ((iteration - 1.0) / iteration) * metric_baseline + metric_baseline_recent * (1.0 / iteration)
             
             # dual player best responds to strategy up to t-1
-            f = auditor.get_group(A, X_prime, y, FP)
-            # flag whether FP disparity was positive or negative
-            pos_neg = f[4]
-            fp_disparity = f[1]
+            f = auditor.get_group(predictions, metric_baseline)
+
             group_size_0 = np.sum(f[0].predict(X_0)) * (1.0 / n)
 
             # compute list of people who have been included in an identified subgroup up to time t
@@ -80,7 +78,6 @@ class Model:
 
             p_t = learner.best_response(costs_0, costs_1)
             A_t = p_t.predict(X)
-            FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
 
             # append new group, new p, fairness_violations of group found, coefficients, group size
             groups.append(f[0])
@@ -88,7 +85,6 @@ class Model:
             fairness_violations_t.append(np.abs(f[1]))
             errors_t.append(err)
             coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
-
 
             # outputs
             if iteration == 1:
@@ -123,11 +119,20 @@ class Model:
                     vmax = minmax[1]
 
             # update costs: the primal player best responds
-            costs_1 = auditor.update_costs(costs_1, f, X_prime, y, self.C, iteration, fp_disparity, self.gamma)
+            costs_1 = auditor.update_costs(costs_1, f, self.C, iteration, self.gamma)
             iteration += 1    
 
         self.classifiers = p
         return errors_t, fairness_violations_t
+
+    def get_baseline(self, y, y_hat):
+        if self.fairness_def == 'FP':
+            return np.mean([y_hat[i] for i, c in enumerate(y) if c == 0])
+        elif self.fairness_def == 'FN':
+            return np.mean([(1 - y_hat[i]) for i, c in enumerate(y) if c == 1])
+        elif self.fairness_def == 'SP':
+            return np.mean([(1-c)*(y_hat[i]) + c*(1-y_hat[i]) for i, c in enumerate(y)])
+
 
     def predict(self, X):
         num_classifiers = len(self.classifiers)
@@ -246,72 +251,122 @@ class Learner:
 
 class Auditor:
     """docstring for Auditor"""
-    def update_costs(self, c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
+    def __init__(self, X_prime, y, fairness_def):
+        self.X_prime = X_prime
+        self.y = y
+        self.fairness_def = fairness_def
+        self.X_prime_0 = pd.DataFrame([self.X_prime.iloc[u, :] for u, s in enumerate(self.y) if s == 0])
+        self.X_prime_1 = pd.DataFrame([self.X_prime.iloc[u, :] for u, s in enumerate(self.y) if s == 1])
+
+
+    def get_baseline(self, y, y_hat):
+        if self.fairness_def == 'FP':
+            return np.mean([y_hat[i] for i, c in enumerate(y) if c == 0])
+        elif self.fairness_def == 'FN':
+            return np.mean([(1 - y_hat[i]) for i, c in enumerate(y) if c == 1])
+        elif self.fairness_def == 'SP':
+            return np.mean([(1-c)*(y_hat[i]) + c*(1-y_hat[i]) for i, c in enumerate(y)])
+
+    def update_costs(self, c_1, f, C, iteration, gamma):
         """Recursively update the costs from incorrectly predicting 1 for the learner."""
         # store whether FP disparity was + or -
         pos_neg = f[4]
-        X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
-        g_members = f[0].predict(X_0_prime)
-        m = len(c_1)
-        n = len(y)
-        g_weight_0 = np.sum(g_members)*(1.0/float(m))
-        for i in range(n):
-            in_group_count = 0
-            if y[i] == 0:
-                new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight_0 - g_members[in_group_count])
-                if np.abs(fp_disp) < gamma:
+        n = len(self.y)
+        if self.fairness_def == 'FP':
+            g_members = f[0].predict(self.X_prime_0)
+            m = self.X_prime_0.shape[0]
+            g_weight = np.sum(g_members)*(1.0/float(m))
+            for i in range(n):
+                in_group_count = 0
+                if self.y[i] == 0:
+                    new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[in_group_count])
+                    if np.abs(f[1]) < gamma:
+                        new_group_cost = 0
+                    c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
+                    in_group_count += 1
+                else:
+                    c_1[i] = -1.0/n
+
+        elif self.fairness_def == 'FN':
+            g_members = f[0].predict(self.X_prime_1)
+            m = self.X_prime_1.shape[0]
+            g_weight = np.sum(g_members)*(1.0/float(m))
+            for i in range(n):
+                in_group_count = 0
+                if self.y[i] == 1:
+                    new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[in_group_count])
+                    if np.abs(f[1]) < gamma:
+                        new_group_cost = 0
+                    c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
+                    in_group_count += 1
+                else:
+                    c_1[i] = -1.0/n
+
+        elif self.fairness_def == 'SP':
+            g_members = f[0].predict(self.X_prime)
+            m = self.X_prime.shape[0]
+            g_weight = np.sum(g_members)*(1.0/float(m))
+            for i in range(n):
+                new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[i])
+                if np.abs(f[1]) < gamma:
                     new_group_cost = 0
                 c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-                in_group_count += 1
-            else:
-                c_1[i] = -1.0/n
+        
         return c_1
 
-    def get_group(self, A, X_sens, y_g, FP):
+    def get_subset(self, predictions):
+        if self.fairness_def == 'FP':
+            return self.X_prime_0, [a for u, a in enumerate(predictions) if self.y[u] == 0]
+        elif self.fairness_def == 'FN':
+            return self.X_prime_1, [a for u, a in enumerate(predictions) if self.y[u] == 1]
+        elif self.fairness_def == 'SP':
+            return self.X_prime, predictions
+
+    def get_group(self, predictions, metric_baseline):
         """Given decisions on sensitive attributes, labels, and FP rate audit wrt
             to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
         """
-        A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
-        X_0 = pd.DataFrame([X_sens.iloc[u, :]
-                            for u, s in enumerate(y_g) if s == 0])
-        m = len(A_0)
-        n = float(len(y_g))
+        X_subset, predictions_subset = self.get_subset(predictions)
+
+        m = len(predictions_subset)
+        n = float(len(self.y))
         cost_0 = [0.0] * m
-        cost_1 = -1.0 / n * (FP - A_0)
+        cost_1 = -1.0 / n * (metric_baseline - predictions_subset)
         reg0 = linear_model.LinearRegression()
-        reg0.fit(X_0, cost_0)
+        reg0.fit(X_subset, cost_0)
         reg1 = linear_model.LinearRegression()
-        reg1.fit(X_0, cost_1)
+        reg1.fit(X_subset, cost_1)
         func = RegOracle(reg0, reg1)
-        group_members_0 = func.predict(X_0)
-        err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
-                             for i in range(len(A_0))])
+        group_members_0 = func.predict(X_subset)
+        err_group = np.mean([np.abs(group_members_0[i] - predictions_subset[i])
+                             for i in range(len(predictions_subset))])
         # get the false positive rate in group
         if sum(group_members_0) == 0:
             fp_group_rate = 0
         else:
-            fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
+            fp_group_rate = np.mean([r for t, r in enumerate(predictions_subset) if group_members_0[t] == 1])
         g_size_0 = np.sum(group_members_0) * 1.0 / n
-        fp_disp = np.abs(fp_group_rate - FP)
+        fp_disp = np.abs(fp_group_rate - metric_baseline)
         fp_disp_w = fp_disp * g_size_0
 
         # negation
         cost_0_neg = [0.0] * m
-        cost_1_neg = -1.0 / n * (A_0-FP)
+        cost_1_neg = -1.0 / n * (predictions_subset - metric_baseline)
         reg0_neg = linear_model.LinearRegression()
-        reg0_neg.fit(X_0, cost_0_neg)
+        reg0_neg.fit(X_subset, cost_0_neg)
         reg1_neg = linear_model.LinearRegression()
-        reg1_neg.fit(X_0, cost_1_neg)
+        reg1_neg.fit(X_subset, cost_1_neg)
         func_neg = RegOracle(reg0_neg, reg1_neg)
-        group_members_0_neg = func_neg.predict(X_0)
+        group_members_0_neg = func_neg.predict(X_subset)
         err_group_neg = np.mean(
-            [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
+            [np.abs(group_members_0_neg[i] - predictions_subset[i]) for i in range(len(predictions_subset))])
         if sum(group_members_0_neg) == 0:
             fp_group_rate_neg = 0
         else:
-            fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
+            # update 
+            fp_group_rate_neg = np.mean([r for t, r in enumerate(predictions_subset) if group_members_0[t] == 0])
         g_size_0_neg = np.sum(group_members_0_neg) * 1.0 / n
-        fp_disp_neg = np.abs(fp_group_rate_neg - FP)
+        fp_disp_neg = np.abs(fp_group_rate_neg - metric_baseline)
         fp_disp_w_neg = fp_disp_neg*g_size_0_neg
 
         # return group
@@ -326,7 +381,8 @@ class Auditor:
         """
         if isinstance(predictions, pd.DataFrame):
             predictions = predictions.values
-        FP = np.mean([p for i,p in enumerate(predictions) if y[i] == 0])
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, X_sens=X_prime, y_g=y, FP=FP)
+
+        metric_baseline = self.get_baseline(y, predictions)
+        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, y_g=y, metric_baseline=metric_baseline)
 
         return aud_group.predict(X_prime), gamma_unfair
