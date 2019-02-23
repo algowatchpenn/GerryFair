@@ -13,6 +13,8 @@ class Model:
     # Fictitious Play Algorithm
     # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
     # Output: for each iteration, the error and the fp difference - heatmap can also be produced
+
+    # Need to update for FN, SP
     def _fictitious_play(self,
                         X,
                         X_prime,
@@ -34,9 +36,14 @@ class Model:
         cum_group_mems = []
         m = len([s for s in y if s == 0])
         c_1t = [1.0 / n] * m
+        
+
+        # can change name to something like metric_violation
         FP = 0
         A = [0.0] * n
         group_membership = [0.0] * n
+
+        # figure out if this is important; might only need to update auditor
         X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 
         # scaling variables for heatmap
@@ -137,6 +144,8 @@ class Model:
 
     def pareto(self, X, X_prime, y, gamma_list, C=10, max_iters=10):
         # Store errors and fp over time for each gamma
+
+        # change var names, but no real dependence on FP logic
         all_errors = []
         all_fp = []
         self.C = C
@@ -186,6 +195,7 @@ class Model:
             self.gamma = gamma
 
     def __init__(self, C=10,
+                        metric='FP',
                         printflag=False,
                         heatmapflag=False,
                         heatmap_iter=10,
@@ -193,6 +203,7 @@ class Model:
                         max_iters=10,
                         gamma=0.01):
         self.C = C
+        self.metric = metric
         self.printflag = printflag
         self.heatmapflag = heatmapflag
         self.heatmap_iter = heatmap_iter
@@ -205,7 +216,10 @@ class Learner:
         self.X = X
         self.y = y
 
+
     def best_response(self, c_1t):
+        # should be passed c_0, c_1
+
         """Solve the CSC problem for the learner."""
         n = len(self.y)
         c_1t_new = c_1t[:]
@@ -232,20 +246,20 @@ class Learner:
     # iter: the iteration
     # Outputs:
     # error: the error of the average classifier found thus far (incorporating q)
-    def generate_predictions(self, q, A, iteration):
+    def generate_predictions(self, q, prev_decisions, iteration):
         """Return the classifications of the average classifier at time iter."""
 
         new_preds = np.multiply(1.0 / iteration, q.predict(self.X))
-        ds = np.multiply((iteration - 1.0) / iteration, A)
-        ds = np.add(ds, new_preds)
-        error = np.mean([np.abs(ds[k] - self.y[k]) for k in range(len(self.y))])
+        old_preds = np.multiply((iteration - 1.0) / iteration, prev_decisions)
+        preds_mixture = np.add(old_preds, new_preds)
+        error = np.mean([np.abs(preds_mixture[k] - self.y[k]) for k in range(len(self.y))])
         return [error, ds]
 
 class Auditor:
     """docstring for Auditor"""
     def update_costs(self, c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
         """Recursively update the costs from incorrectly predicting 1 for the learner."""
-        # store whether FP disparity was + or -
+        # store whether FP disparity was + or - (UPDATE for FN/SP)
         pos_neg = f[4]
         X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
         g_members = f[0].predict(X_0_prime)
@@ -264,6 +278,8 @@ class Auditor:
     def get_group(self, A, X_sens, y_g, FP):
         """Given decisions on sensitive attributes, labels, and FP rate audit wrt
             to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
+
+            (UPDATE for FN/SP)
         """
 
         A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
@@ -318,6 +334,8 @@ class Auditor:
     def audit(self, predictions, X_prime, y):
         """Takes in predictions on dataset (X',y) and prints gamma-unfairness,
         fp disparity, group size, group coefficients, and sensitive column names.
+
+        (UPDATE for FN/SP)
         """
         if isinstance(predictions, pd.DataFrame):
             predictions = predictions.values
