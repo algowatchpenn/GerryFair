@@ -6,10 +6,31 @@ import gerryfair.fairness_plots
 import gerryfair.heatmap
 from gerryfair.reg_oracle_class import RegOracle
 import matplotlib.pyplot as plt
+from sklearn.linear_model import *
+import torch
 
 class Model:
-    """Model object for fair learning and classification"""
-    
+    """Model object for fair learning and classification
+       predictor must have fit() and predict()  methods (sklearn compatible)
+       e.g. object of class LinearRegression, sklearn, or an object of class TorchPredictor
+    """
+
+    def __init__(self, C=10,
+                        printflag=False,
+                        heatmapflag=False,
+                        heatmap_iter=10,
+                        heatmap_path='.',
+                        max_iters=10,
+                        gamma=0.01, predictor=LinearRegression):
+        self.C = C
+        self.printflag = printflag
+        self.heatmapflag = heatmapflag
+        self.heatmap_iter = heatmap_iter
+        self.heatmap_path = heatmap_path
+        self.max_iters = max_iters
+        self.gamma = gamma
+        self.predictor = predictor
+
     # Fictitious Play Algorithm
     # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
     # Output: for each iteration, the error and the fp difference - heatmap can also be produced
@@ -19,12 +40,12 @@ class Model:
                         y):
 
         # defining variables and data structures for algorithm
-        learner = Learner(X, y)
+        learner = Learner(X, y, self.predictor)
         auditor = Auditor()
 
         n = X.shape[0]
         m = len([s for s in y if s == 0])
-        p = [learner.best_response([1.0 / n] * m)]
+        p = [learner.best_response_FP([1.0 / n] * m)]
         iteration = 1
         errors_t = []
         fp_diff_t = []
@@ -72,7 +93,7 @@ class Model:
             cum_group_mems.append(group_members_t)
 
             # compute learner's best response to the CSC problem
-            p_t = learner.best_response(c_1t)
+            p_t = learner.best_response_FP(c_1t)
             A_t = p_t.predict(X)
             FP_t = np.mean([A_t[i] for i, c in enumerate(y) if c == 0])
 
@@ -185,43 +206,81 @@ class Model:
         if gamma:
             self.gamma = gamma
 
-    def __init__(self, C=10,
-                        printflag=False,
-                        heatmapflag=False,
-                        heatmap_iter=10,
-                        heatmap_path='.',
-                        max_iters=10,
-                        gamma=0.01):
-        self.C = C
-        self.printflag = printflag
-        self.heatmapflag = heatmapflag
-        self.heatmap_iter = heatmap_iter
-        self.heatmap_path = heatmap_path
-        self.max_iters = max_iters
-        self.gamma = gamma
 
 class Learner:
-    def __init__(self, X, y):
+    def __init__(self, X, y, predictor=LinearRegression):
         self.X = X
         self.y = y
+        self.predictor = predictor
 
-    def best_response(self, c_1t):
+    def best_response_FP(self, c_1t):
         """Solve the CSC problem for the learner."""
         n = len(self.y)
-        c_1t_new = c_1t[:]
+        c_1t_copy = c_1t[:]
         c_0 = [0.0] * n
         c_1 = []
         for r in range(n):
             if self.y[r] == 1:
                 c_1.append((-1.0/n))
             else:
-                c_1.append(c_1t_new.pop(0))
-        reg0 = linear_model.LinearRegression()
-        reg0.fit(self.X, c_0)
-        reg1 = linear_model.LinearRegression()
-        reg1.fit(self.X, c_1)
+                c_1.append(c_1t_copy.pop(0))
+        reg0 = self.predictor()
+        self.predictor.fit(self.X, c_0)
+        reg1 = self.predictor()
+        self.predictor.fit(self.X, c_1)
         func = RegOracle(reg0, reg1)
         return func
+
+
+class TorchPredictor:
+    """Takes in a neural network defined in torch and outputs a valid Predictor"""
+
+    def __init__(self, nn, criterion, optimizer, batch_size, device=False):
+        self.nn = nn
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.batch_size = batch_size
+        self.device = device
+
+    def fit(self, X, costs):
+
+        trainset = [(torch.Tensor(X.iloc[i, :]), costs[i]) for i in range(len(costs))]
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=self.batch_size,
+                                    shuffle=True, num_workers=2)
+        if self.device:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.nn = self.nn.to(device)
+
+        for epoch in range(2):  # loop over the dataset multiple times
+
+            running_loss = 0.0
+            for i, data in enumerate(trainloader, 0):
+                # get the inputs
+                inputs, labels = data
+                if self.device:
+                    inputs, labels = inputs.to(device), labels.to(device)
+
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
+
+                # forward + backward + optimize
+                outputs = self.nn(inputs)
+                loss = self.criterion(outputs, labels)
+                loss.backward()
+                self.optimizer.step()
+
+                # print statistics
+                running_loss += loss.item()
+                if i % 2000 == 1999:  # print every 2000 mini-batches
+                    print('[%d, %5d] loss: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 2000))
+                    running_loss = 0.0
+
+        print('Finished Training')
+
+        def predict(self, x):
+            x = torch.Tensor(x)
+            return self.nn(x)
 
 
     # Inputs:

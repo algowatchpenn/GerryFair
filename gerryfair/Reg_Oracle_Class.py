@@ -1,5 +1,10 @@
 import numpy as np
-
+"""
+Cost sensitive classification Oracles 
+take in two learners each of which have predict
+methods, which predict the cost for predicting 0 and 1 
+respectively
+"""
 class RegOracle:
     """Class RegOracle, linear threshold classifier."""
     def __init__(self, b0, b1):
@@ -21,6 +26,7 @@ class RegOracle:
             y.append(y_i)
         return y
 
+# random linear threshold predictor
 class RandomLinearThresh:
     """Class random hyperplane classifier."""
     def __init__(self, d):
@@ -38,6 +44,7 @@ class RandomLinearThresh:
             y.append(y_i)
         return y
 
+# hyperplane classifier
 class LinearThresh:
     """Class hyperplane classifier."""
     def __init__(self, d):
