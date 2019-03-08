@@ -1,13 +1,5 @@
-import numpy as np
-import pandas as pd
-from sklearn import linear_model
-import random
-import gerryfair.fairness_plots
-import gerryfair.heatmap
-from gerryfair.reg_oracle_class import RegOracle
-import matplotlib.pyplot as plt
-from sklearn.linear_model import *
-import torch
+from import_packages import *
+
 
 class Model:
     """Model object for fair learning and classification

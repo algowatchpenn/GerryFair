@@ -1,6 +1,5 @@
-import argparse
-import numpy as np
-import pandas as pd
+from import_packages import *
+
 
 def setup():
     parser = argparse.ArgumentParser(description='Fairness Data Cleaning')

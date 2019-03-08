@@ -1,5 +1,5 @@
-from matplotlib import pyplot as plt
-import numpy as np
+from import_packages import *
+
 
 def plot_single(errors_t, fp_diff_t, max_iters, gamma, C):
     # plot errors

@@ -1,10 +1,5 @@
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+from import_packages import *
 
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from gerryfair.reg_oracle_class import *
 
 def calc_disp(A_p, X, y_g, X_sens, g):
     """Return the fp disparity in a group g."""
