@@ -1,4 +1,9 @@
-from import_packages import *
+from gerryfair.clean import *
+from torch.utils.data import DataLoader
+import gerryfair.heatmap
+import torch.optim as optim
+import torch.nn as nn
+
 
 
 class Model:
@@ -216,63 +221,11 @@ class Learner:
                 c_1.append((-1.0/n))
             else:
                 c_1.append(c_1t_copy.pop(0))
-        reg0 = self.predictor()
-        self.predictor.fit(self.X, c_0)
-        reg1 = self.predictor()
-        self.predictor.fit(self.X, c_1)
+
+        reg0 = self.predictor.fit(self.X, c_0)
+        reg1 = self.predictor.fit(self.X, c_1)
         func = RegOracle(reg0, reg1)
         return func
-
-
-class TorchPredictor:
-    """Takes in a neural network defined in torch and outputs a valid Predictor"""
-
-    def __init__(self, nn, criterion, optimizer, batch_size, device=False):
-        self.nn = nn
-        self.criterion = criterion
-        self.optimizer = optimizer
-        self.batch_size = batch_size
-        self.device = device
-
-    def fit(self, X, costs):
-
-        trainset = [(torch.Tensor(X.iloc[i, :]), costs[i]) for i in range(len(costs))]
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=self.batch_size,
-                                    shuffle=True, num_workers=2)
-        if self.device:
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            self.nn = self.nn.to(device)
-
-        for epoch in range(2):  # loop over the dataset multiple times
-
-            running_loss = 0.0
-            for i, data in enumerate(trainloader, 0):
-                # get the inputs
-                inputs, labels = data
-                if self.device:
-                    inputs, labels = inputs.to(device), labels.to(device)
-
-                # zero the parameter gradients
-                self.optimizer.zero_grad()
-
-                # forward + backward + optimize
-                outputs = self.nn(inputs)
-                loss = self.criterion(outputs, labels)
-                loss.backward()
-                self.optimizer.step()
-
-                # print statistics
-                running_loss += loss.item()
-                if i % 2000 == 1999:  # print every 2000 mini-batches
-                    print('[%d, %5d] loss: %.3f' %
-                          (epoch + 1, i + 1, running_loss / 2000))
-                    running_loss = 0.0
-
-        print('Finished Training')
-
-        def predict(self, x):
-            x = torch.Tensor(x)
-            return self.nn(x)
 
 
     # Inputs:
@@ -291,6 +244,71 @@ class TorchPredictor:
         ds = np.add(ds, new_preds)
         error = np.mean([np.abs(ds[k] - self.y[k]) for k in range(len(self.y))])
         return [error, ds]
+
+
+# helper function for torch support
+def xavier_init(m):
+    if type(m) == nn.Linear:
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
+
+class TorchPredictor:
+    """Takes in a neural network defined in torch and outputs a valid Predictor"""
+
+    def __init__(self, nn, criterion, optimizer, batch_size, initialization=xavier_init, device=False):
+        self.nn = nn
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.batch_size = batch_size
+        self.device = device
+        self.initialization = initialization
+
+    def fit(self, X, costs):
+
+        dataset = Intersectional_Dataset(X, costs)
+        # define the dataloader to iterate through dataset
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
+        criterion = nn.MSELoss()
+        optimizer = optim.Adam(self.nn.parameters(), lr=.001)
+        self.nn.apply(self.initialization)
+        if self.device:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.nn = self.nn.to(device)
+
+        for epoch in range(2):  # loop over the dataset multiple times
+
+            running_loss = 0.0
+            for i, data in enumerate(dataloader, 0):
+                # get the inputs
+                x = data['x'].float()
+                y = data['y'].float()
+                if self.device:
+                    x, y = x.to(device), y.to(device)
+
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
+
+                # forward + backward + optimize
+                outputs = self.nn(x)
+                loss = self.criterion(outputs, y)
+                loss.backward()
+                self.optimizer.step()
+
+                # print statistics
+                running_loss += loss.item()
+                if i % 100 == 99:  # print every 100 mini-batches
+                    print('[%d, %5d] loss: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 2000))
+                    running_loss = 0.0
+
+        print('Finished Training')
+        return self
+
+    def predict(self, x_series):
+        x_tensor = torch.from_numpy(x_series).float()
+        return self.nn(x_tensor)
+
 
 class Auditor:
     """docstring for Auditor"""
@@ -376,3 +394,4 @@ class Auditor:
         aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, X_sens=X_prime, y_g=y, FP=FP)
 
         return aud_group.predict(X_prime), gamma_unfair
+

@@ -1,5 +1,6 @@
-from import_packages import *
-
+from gerryfair.import_packages import *
+from torch.utils.data import Dataset
+import torch.nn as nn
 
 def setup():
     parser = argparse.ArgumentParser(description='Fairness Data Cleaning')
@@ -26,6 +27,8 @@ Attributes: Filename for the attributes of the dataset. The file should have eac
 list should have 0 for an unprotected attribute, 1 for a protected attribute, and 2 for the attribute of the label.
 
 '''
+
+
 def clean_dataset(dataset, attributes, centered):
     df = pd.read_csv(dataset)
     sens_df = pd.read_csv(attributes)
@@ -105,6 +108,20 @@ def get_data(dataset):
     return X, X_prime, y
 
 
+# Wrapper to convert (X, X', y) to Dataset() class in pytorch
+class Intersectional_Dataset(Dataset):
+    """Wrapper for Datasets, convert from numpy to tensor"""
+
+    def __init__(self, X, y):
+        self.X = torch.from_numpy(np.matrix(X)).double()
+        self.y = torch.from_numpy(np.array(y))
+
+    def __getitem__(self, idx):
+        sample = {'x': self.X[idx], 'y': self.y[idx]}
+        return sample
+
+    def __len__(self):
+        return len(self.y)
 
 
 

@@ -1,4 +1,4 @@
-from import_packages import *
+from gerryfair.import_packages import *
 
 
 def calc_disp(A_p, X, y_g, X_sens, g):

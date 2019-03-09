@@ -1,4 +1,4 @@
-from import_packages import *
+from gerryfair.import_packages import *
 
 
 def plot_single(errors_t, fp_diff_t, max_iters, gamma, C):
