@@ -26,8 +26,12 @@ class Model:
         m = len([s for s in y if s == 0])
 
         # set default costs
-        costs_0 = [0.0] * n
-        costs_1 = [1.0 / n] * n
+        if self.fairness_def == 'FP':
+            costs_0 = [0.0] * n
+            costs_1 = [1.0 / n] * n
+        elif self.fairness_def == 'FN':
+            costs_1 = [0.0] * n
+            costs_0 = [1.0 / n] * n
 
         p = [learner.best_response(costs_0, costs_1)]
         iteration = 1
@@ -119,7 +123,7 @@ class Model:
                     vmax = minmax[1]
 
             # update costs: the primal player best responds
-            costs_1 = auditor.update_costs(costs_1, f, self.C, iteration, self.gamma)
+            costs_0, costs_1 = auditor.update_costs(costs_0, costs_1, f, self.C, iteration, self.gamma)
             iteration += 1    
 
         self.classifiers = p
@@ -267,7 +271,7 @@ class Auditor:
         elif self.fairness_def == 'SP':
             return np.mean([(1-c)*(y_hat[i]) + c*(1-y_hat[i]) for i, c in enumerate(y)])
 
-    def update_costs(self, c_1, f, C, iteration, gamma):
+    def update_costs(self, c_0, c_1, f, C, iteration, gamma):
         """Recursively update the costs from incorrectly predicting 1 for the learner."""
         # store whether FP disparity was + or -
         pos_neg = f[4]
@@ -297,10 +301,10 @@ class Auditor:
                     new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[in_group_count])
                     if np.abs(f[1]) < gamma:
                         new_group_cost = 0
-                    c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
+                    c_0[i] = (c_0[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
                     in_group_count += 1
                 else:
-                    c_1[i] = -1.0/n
+                    c_0[i] = -1.0/n
 
         elif self.fairness_def == 'SP':
             g_members = f[0].predict(self.X_prime)
@@ -312,7 +316,7 @@ class Auditor:
                     new_group_cost = 0
                 c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
         
-        return c_1
+        return c_0, c_1
 
     def get_subset(self, predictions):
         if self.fairness_def == 'FP':
