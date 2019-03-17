@@ -11,7 +11,7 @@ class Model:
     """Model object for fair learning and classification"""
     
     # Fictitious Play Algorithm
-    # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
+    # Input: dataset cleaned into X, X_prime, y, and arguments from cleaning
     # Output: for each iteration, the error and the fp difference - heatmap can also be produced
     def _fictitious_play(self,
                         X,
@@ -124,6 +124,7 @@ class Model:
         return errors_t, fp_diff_t
 
     def predict(self, X):
+        """This function predicts the labels given a new features. It thresholds the predictions at .5."""
         num_classifiers = len(self.classifiers)
 
         y_hat = None
@@ -133,9 +134,12 @@ class Model:
                 y_hat = new_preds
             else:
                 y_hat = np.add(y_hat, new_preds)
-        return pd.DataFrame(y_hat)
+        return [1 if y > .5 else 0 for y in y_hat]
 
     def pareto(self, X, X_prime, y, gamma_list, C=10, max_iters=10):
+        """This function loops through the values in gamma_list. For each value it trains a model on X, X_prime and Y
+            with that value of gamma. It stores the error and the fairness disparity and produces a plot depicting
+            the trade off."""
         # Store errors and fp over time for each gamma
         all_errors = []
         all_fp = []
@@ -155,6 +159,9 @@ class Model:
         return (all_errors, all_fp)
 
     def train(self, X, X_prime, y, alg="fict"):
+        """Method for training the model on given data. X is the features, X_prime is the protected attributes,
+            and y is the labels. As of right now, we only support the Fictitious play algorithm, denoted as 'fict'.
+            """
         if alg == "fict":
             err, fp_diff = self._fictitious_play(X, X_prime, y)
             return err, fp_diff
@@ -242,7 +249,8 @@ class Learner:
         return [error, ds]
 
 class Auditor:
-    """docstring for Auditor"""
+    """This is the Auditor class. It is used in the training algorithm to repeatedly find subgroups that break the
+    fairness disparity constraint. You can also use it independently as a stand alone auditor."""
     def update_costs(self, c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
         """Recursively update the costs from incorrectly predicting 1 for the learner."""
         # store whether FP disparity was + or -
@@ -316,8 +324,8 @@ class Auditor:
             return [func, fp_disp_w, fp_disp, err_group, 1]
 
     def audit(self, predictions, X_prime, y):
-        """Takes in predictions on dataset (X',y) and prints gamma-unfairness,
-        fp disparity, group size, group coefficients, and sensitive column names.
+        """Takes in predictions on dataset (X',y) and outputs a vector which represents the group that
+            violates the fairness metricand the fairness disparity of that group.
         """
         if isinstance(predictions, pd.DataFrame):
             predictions = predictions.values
