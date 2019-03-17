@@ -290,20 +290,20 @@ class Auditor:
                     X_prime_0_index += 1
                 else:
                     c_1[i] = -1.0/n
-            print(c_1)
+            #print(c_1)
 
         elif self.fairness_def == 'FN':
             g_members = f[0].predict(self.X_prime_1)
             m = self.X_prime_1.shape[0]
             g_weight = np.sum(g_members)*(1.0/float(m))
             for i in range(n):
-                in_group_count = 0
+                X_prime_1_index = 0
                 if self.y[i] == 1:
-                    new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[in_group_count])
+                    new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[X_prime_1_index])
                     if np.abs(f[1]) < gamma:
                         new_group_cost = 0
                     c_0[i] = (c_0[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-                    in_group_count += 1
+                    X_prime_1_index += 1
                 else:
                     c_0[i] = -1.0/n
 
