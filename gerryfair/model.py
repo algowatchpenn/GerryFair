@@ -153,7 +153,7 @@ class Model:
     def pareto(self, X, X_prime, y, gamma_list, C=10, max_iters=10):
         # Store errors and fp over time for each gamma
         all_errors = []
-        all_fp = []
+        all_violations = []
         self.C = C
         self.max_iters = max_iters
         for g in gamma_list:
