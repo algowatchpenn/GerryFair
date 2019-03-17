@@ -148,12 +148,12 @@ class Model:
                 y_hat = new_preds
             else:
                 y_hat = np.add(y_hat, new_preds)
-        return pd.DataFrame(y_hat)
+        return [1 if y > .5 else 0 for y in y_hat]
 
     def pareto(self, X, X_prime, y, gamma_list, C=10, max_iters=10):
         # Store errors and fp over time for each gamma
         all_errors = []
-        all_fp = []
+        all_violations = []
         self.C = C
         self.max_iters = max_iters
         for g in gamma_list:
@@ -237,11 +237,9 @@ class Learner:
 
 
     # Inputs:
-    # A: the previous set of decisions (probabilities) up to time iter - 1
     # q: the most recent classifier found
-    # x: the dataset
-    # y: the labels
-    # iter: the iteration
+    # A: the previous set of decisions (probabilities) up to time iter - 1
+    # iteration: the number of iteration
     # Outputs:
     # error: the error of the average classifier found thus far (incorporating q)
     def generate_predictions(self, q, A, iteration):
@@ -254,7 +252,8 @@ class Learner:
         return [error, ds]
 
 class Auditor:
-    """docstring for Auditor"""
+    """This is the Auditor class. It is used in the training algorithm to repeatedly find subgroups that break the
+    fairness disparity constraint. You can also use it independently as a stand alone auditor."""
     def __init__(self, X_prime, y, fairness_def):
         self.X_prime = X_prime
         self.y = y
@@ -381,13 +380,13 @@ class Auditor:
             return [func, fp_disp_w, fp_disp, err_group, 1]
 
     def audit(self, predictions, X_prime, y):
-        """Takes in predictions on dataset (X',y) and prints gamma-unfairness,
-        fp disparity, group size, group coefficients, and sensitive column names.
+        """Takes in predictions on dataset (X',y) and returns:
+            a vector which represents the group that violates the fairness metric, along with the u.
         """
         if isinstance(predictions, pd.DataFrame):
             predictions = predictions.values
 
         metric_baseline = self.get_baseline(y, predictions)
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, y_g=y, metric_baseline=metric_baseline)
+        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, metric_baseline)
 
         return aud_group.predict(X_prime), gamma_unfair
