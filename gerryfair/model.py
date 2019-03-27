@@ -5,6 +5,8 @@ import random
 import gerryfair.fairness_plots
 import gerryfair.heatmap
 from gerryfair.reg_oracle_class import RegOracle
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 class Model:
@@ -150,7 +152,10 @@ class Model:
                 y_hat = np.add(y_hat, new_preds)
         return [1 if y > .5 else 0 for y in y_hat]
 
-    def pareto(self, X, X_prime, y, gamma_list, C=10, max_iters=10):
+    def pareto(self, X, X_prime, y, gamma_list):
+
+        C=self.C
+        max_iters=self.max_iters
         # Store errors and fp over time for each gamma
         all_errors = []
         all_violations = []
@@ -334,8 +339,14 @@ class Auditor:
 
         m = len(predictions_subset)
         n = float(len(self.y))
-        cost_0 = [0.0] * m
-        cost_1 = -1.0 / n * (metric_baseline - predictions_subset)
+
+        if self.fairness_def == "FP":
+            cost_0 = [0.0] * m
+            cost_1 = -1.0 / n * (metric_baseline - predictions_subset)
+        else:
+            cost_1 = [0.0] * m
+            cost_0 = -1.0 / n * (metric_baseline - predictions_subset)
+        
         reg0 = linear_model.LinearRegression()
         reg0.fit(X_subset, cost_0)
         reg1 = linear_model.LinearRegression()
@@ -344,6 +355,7 @@ class Auditor:
         group_members_0 = func.predict(X_subset)
         err_group = np.mean([np.abs(group_members_0[i] - predictions_subset[i])
                              for i in range(len(predictions_subset))])
+        
         # get the false positive rate in group
         if sum(group_members_0) == 0:
             fp_group_rate = 0
@@ -353,9 +365,15 @@ class Auditor:
         fp_disp = np.abs(fp_group_rate - metric_baseline)
         fp_disp_w = fp_disp * g_size_0
 
+
         # negation
-        cost_0_neg = [0.0] * m
-        cost_1_neg = -1.0 / n * (predictions_subset - metric_baseline)
+        if self.fairness_def == "FP":
+            cost_0_neg = [0.0] * m
+            cost_1_neg = -1.0 / n * (predictions_subset - metric_baseline)
+        else:
+            cost_1_neg = [0.0] * m
+            cost_0_neg = -1.0 / n * (predictions_subset - metric_baseline)
+
         reg0_neg = linear_model.LinearRegression()
         reg0_neg.fit(X_subset, cost_0_neg)
         reg1_neg = linear_model.LinearRegression()
@@ -364,6 +382,7 @@ class Auditor:
         group_members_0_neg = func_neg.predict(X_subset)
         err_group_neg = np.mean(
             [np.abs(group_members_0_neg[i] - predictions_subset[i]) for i in range(len(predictions_subset))])
+        
         if sum(group_members_0_neg) == 0:
             fp_group_rate_neg = 0
         else:

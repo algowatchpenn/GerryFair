@@ -1,4 +1,6 @@
 import gerryfair
+
+
 dataset = "./dataset/communities.csv"
 attributes = "./dataset/communities_protected.csv"
 centered = True
@@ -10,10 +12,9 @@ fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairne
 max_iters = 1000
 fair_model.set_options(max_iters=max_iters)
 
-
 # Train Set
 
-train_size = 1000
+train_size = 100
 
 X_train = X.iloc[:train_size]
 X_prime_train = X_prime.iloc[:train_size]
