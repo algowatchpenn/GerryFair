@@ -166,12 +166,14 @@ class Model:
             errors_gt, fairness_violations_gt = self._fictitious_play(X, X_prime, y)
             print(errors_gt, fairness_violations_gt)
             all_errors.append(np.mean(errors_gt))
-            all_violations.append(np.mean(fairness_violations_gt))
+            all_violations.append(np.mean(fairness_violations_gt))        
+        '''
         plt.plot(all_errors, all_violations)
         plt.xlabel('error')
         plt.ylabel('unfairness (fairness_violations*size)')
         plt.title('error vs. unfairness: C = {}, max_iters = {}'.format(C, max_iters))
         plt.show()
+        '''
         return (all_errors, all_violations)
 
     def train(self, X, X_prime, y, alg="fict"):
