@@ -400,14 +400,14 @@ class Auditor:
         else:
             return [func, fp_disp_w, fp_disp, err_group, 1]
 
-    def audit(self, predictions, X_prime, y):
+    def audit(self, predictions):
         """Takes in predictions on dataset (X',y) and returns:
             a vector which represents the group that violates the fairness metric, along with the u.
         """
         if isinstance(predictions, pd.DataFrame):
             predictions = predictions.values
 
-        metric_baseline = self.get_baseline(y, predictions)
+        metric_baseline = self.get_baseline(self.y, predictions)
         aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, metric_baseline)
 
-        return aud_group.predict(X_prime), gamma_unfair
+        return aud_group.predict(self.X_prime), gamma_unfair

@@ -52,7 +52,7 @@ def clean_dataset(dataset, attributes, centered):
     sens_names = [key for key in sens_dict.keys() if sens_dict[key] == 1]
     print('there are {} sensitive features including derivative features'.format(len(sens_names)))
 
-    X_prime = df[sens_names]
+    X_prime = X[sens_names]
 
     #X = X.reset_index(drop=True)
     #X_prime = X_prime.reset_index(drop=True)
