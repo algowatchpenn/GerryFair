@@ -6,6 +6,7 @@ import gerryfair.fairness_plots
 import gerryfair.heatmap
 from gerryfair.reg_oracle_class import RegOracle
 import matplotlib
+import copy
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -21,7 +22,7 @@ class Model:
                         y):
 
         # defining variables and data structures for algorithm
-        learner = Learner(X, y)
+        learner = Learner(X, y, self.predictor)
         auditor = Auditor(X_prime, y, self.fairness_def)
 
         n = X.shape[0]
@@ -30,10 +31,10 @@ class Model:
         # set default costs
         if self.fairness_def == 'FP':
             costs_0 = [0.0] * n
-            costs_1 = [1.0 / n] * n
+            costs_1 = [-1.0 / n * (2 * i - 1) for i in y]
         elif self.fairness_def == 'FN':
             costs_1 = [0.0] * n
-            costs_0 = [1.0 / n] * n
+            costs_0 = [1.0 / n * (2 * i - 1) for i in y]
 
         p = [learner.best_response(costs_0, costs_1)]
         iteration = 1
@@ -217,7 +218,8 @@ class Model:
                         heatmap_path='.',
                         max_iters=10,
                         gamma=0.01,
-                        fairness_def='FP'):
+                        fairness_def='FP',
+                        predictor=linear_model.LinearRegression()):
         self.C = C
         self.printflag = printflag
         self.heatmapflag = heatmapflag
@@ -226,18 +228,19 @@ class Model:
         self.max_iters = max_iters
         self.gamma = gamma
         self.fairness_def = fairness_def
+        self.predictor = predictor
 
 class Learner:
-    def __init__(self, X, y):
+    def __init__(self, X, y, predictor):
         self.X = X
         self.y = y
+        self.predictor = predictor
 
     def best_response(self, costs_0, costs_1):
         """Solve the CSC problem for the learner."""
-
-        reg0 = linear_model.LinearRegression()
+        reg0 = copy.deepcopy(self.predictor)
         reg0.fit(self.X, costs_0)
-        reg1 = linear_model.LinearRegression()
+        reg1 = copy.deepcopy(self.predictor)
         reg1.fit(self.X, costs_1)
         func = RegOracle(reg0, reg1)
         return func
@@ -411,3 +414,86 @@ class Auditor:
         aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, metric_baseline)
 
         return aud_group.predict(self.X_prime), gamma_unfair
+
+
+# helper function for torch support
+def xavier_init(m):
+    if type(m) == nn.Linear:
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
+def constant_init(m):
+    if type(m) == nn.Linear:
+        torch.nn.init.constant(m.weight)
+        m.bias.data.fill_(0.01)
+
+
+class TorchPredictor:
+    """Takes in a neural network defined in torch and outputs a valid Predictor"""
+
+    def __init__(self, nn, criterion, optimizer, batch_size, initialization=xavier_init, device=False):
+        self.nn = nn
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.batch_size = batch_size
+        self.device = device
+        self.initialization = initialization
+
+    def fit(self, X, costs):
+
+        #X_tensor = torch.from_numpy(X.values).float()
+        costs_tensor = torch.tensor(costs).float()
+        print(costs_tensor)
+
+        dataset = Intersectional_Dataset(X, costs)
+        # define the dataloader to iterate through dataset
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
+
+        num_epochs = 1000
+        for epoch in range(num_epochs):  # loop over the dataset multiple times
+            for i, data in enumerate(dataloader, 0):
+                # get the inputs
+                x = data['x'].float()
+                y = data['y'].float()
+                if self.device:
+                    x, y = x.to(device), y.to(device)
+
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
+
+                # forward + backward + optimize
+                outputs = self.nn(x)
+                loss = self.criterion(outputs, y)
+                loss.backward()
+                self.optimizer.step()
+
+                # print statistics
+                if i == 0 and (epoch % (num_epochs / 10) == 0):
+                    print('[%d, %5d] loss: %.12f' %
+                          (epoch, i, loss.item()))
+
+        print('Finished Training')
+        return self
+
+        # num_iter = 5000
+        # for epoch in range(0, num_iter + 1):  # loop over the dataset multiple times
+        #
+        #     # zero the parameter gradients
+        #     self.optimizer.zero_grad()
+        #
+        #     # forward + backward + optimize
+        #     outputs = self.nn(X_tensor)
+        #     loss = self.criterion(outputs, costs_tensor)
+        #     loss.backward()
+        #     self.optimizer.step()
+        #
+        #     if epoch % (num_iter / 10) == 0:  # print every 100 mini-batches
+        #         print('[%d] loss: %.12f' %
+        #               (epoch, loss.item()))
+        #
+        # print('Finished Training')
+        # return self
+
+    def predict(self, x_series):
+        x_tensor = torch.from_numpy(x_series).float()
+        return self.nn(x_tensor).detach().numpy()
