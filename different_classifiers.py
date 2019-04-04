@@ -79,7 +79,10 @@ def multiple_pareto():
     kernel_predictor = KernelRidge(alpha=1.0, gamma=1.0, kernel='rbf')
     predictor_dict = {'Linear': {'predictor': ln_predictor, 'iters': 300},
                       'SVR': {'predictor': svm_predictor, 'iters': 300},
-                      'DT': {'predictor': tree_predictor, 'iters': 10}}
+                      'DT': {'predictor': tree_predictor, 'iters': 10},
+                      'Kernel': {'predictor': kernel_predictor, 'iters':10}}
+
+    results_dict = {}
 
     for pred in predictor_dict:
         print('Curr Predictor: {}'.format(pred))
@@ -88,7 +91,11 @@ def multiple_pareto():
         fair_clf = Model(C=100, printflag=True, gamma=1, predictor=predictor, max_iters=max_iters)
         fair_clf.set_options(max_iters=max_iters)
         errors, fp_violations, fn_violations = fair_clf.pareto(X_train, X_prime_train, y_train, gamma_list)
+        results_dict[pred] = {'errors': errors, 'fp_violations': fp_violations, 'fn_violations': fn_violations}
         plt.plot(errors, fp_violations, label=pred)
+
+    pickle.dump(results_dict, open('results_dict_' + str(gamma_list) + '_gammas' + str(gamma_list) + '.pkl', 'wb'))
+
     
     plt.xlabel('Error')
     plt.ylabel('Unfairness')
