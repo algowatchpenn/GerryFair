@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
-import random
 import gerryfair.fairness_plots
 import gerryfair.heatmap
+from gerryfair.learner import Learner
+from gerryfair.auditor import Auditor
 from gerryfair.reg_oracle_class import RegOracle
 import matplotlib
-import copy
+
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -32,9 +33,11 @@ class Model:
         if self.fairness_def == 'FP':
             costs_0 = [0.0] * n
             costs_1 = [-1.0 / n * (2 * i - 1) for i in y]
+            X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
         elif self.fairness_def == 'FN':
-            costs_1 = [0.0] * n
-            costs_0 = [1.0 / n * (2 * i - 1) for i in y]
+            costs_0 = [0.0] * n
+            costs_1 = [1.0 / n * (2 * i - 1) for i in y]
+            X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 1])
 
         p = [learner.best_response(costs_0, costs_1)]
         iteration = 1
@@ -48,7 +51,6 @@ class Model:
         metric_baseline = 0
         predictions = [0.0] * n
         group_membership = [0.0] * n
-        X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
 
         # scaling variables for heatmap
         vmin = None
@@ -56,6 +58,7 @@ class Model:
 
         while iteration < self.max_iters:
             print('iteration: {}'.format(int(iteration)))
+
             # get t-1 mixture decisions on X by randomizing on current set of p
             emp_p = learner.generate_predictions(p[-1], predictions, iteration)
             # get the error of the t-1 mixture classifier
@@ -67,7 +70,7 @@ class Model:
             predictions_recent = p[-1].predict(X)
 
             # fairness metric baseline rate of t-1 mixture on new group g_t
-            metric_baseline_recent = self.get_baseline(y, predictions) 
+            metric_baseline_recent = auditor.get_baseline(y, predictions) 
             metric_baseline = ((iteration - 1.0) / iteration) * metric_baseline + metric_baseline_recent * (1.0 / iteration)
             
             # dual player best responds to strategy up to t-1
@@ -82,8 +85,7 @@ class Model:
             cum_group_mems.append(group_members_t)
 
             # compute learner's best response to the CSC problem
-
-            p_t = learner.best_response(costs_0, costs_1)
+            p_t = learner.best_response(costs_0, costs_1)            
             A_t = p_t.predict(X)
 
             # append new group, new p, fairness_violations of group found, coefficients, group size
@@ -127,19 +129,14 @@ class Model:
 
             # update costs: the primal player best responds
             costs_0, costs_1 = auditor.update_costs(costs_0, costs_1, f, self.C, iteration, self.gamma)
-            iteration += 1    
+            iteration += 1
+
+            # early termination:
+            if (len(errors_t) >= 5) and ((errors_t[-1] == errors_t[-2]) or fairness_violations_t[-1] == fairness_violations_t[-2]) and fairness_violations_t[-1] < self.gamma:
+                iteration = self.max_iters
 
         self.classifiers = p
         return errors_t, fairness_violations_t
-
-    def get_baseline(self, y, y_hat):
-        if self.fairness_def == 'FP':
-            return np.mean([y_hat[i] for i, c in enumerate(y) if c == 0])
-        elif self.fairness_def == 'FN':
-            return np.mean([(1 - y_hat[i]) for i, c in enumerate(y) if c == 1])
-        elif self.fairness_def == 'SP':
-            return np.mean([(1-c)*(y_hat[i]) + c*(1-y_hat[i]) for i, c in enumerate(y)])
-
 
     def predict(self, X):
         num_classifiers = len(self.classifiers)
@@ -154,28 +151,32 @@ class Model:
         return [1 if y > .5 else 0 for y in y_hat]
 
     def pareto(self, X, X_prime, y, gamma_list):
-
         C=self.C
         max_iters=self.max_iters
         # Store errors and fp over time for each gamma
         all_errors = []
-        all_violations = []
+        all_fp_violations = []
+        all_fn_violations = []
         self.C = C
         self.max_iters = max_iters
+
+        auditor = Auditor(X_prime, y, 'FN')
         for g in gamma_list:
             self.gamma = g
-            errors_gt, fairness_violations_gt = self._fictitious_play(X, X_prime, y)
-            print(errors_gt, fairness_violations_gt)
-            all_errors.append(np.mean(errors_gt))
-            all_violations.append(np.mean(fairness_violations_gt))        
+            errors_gt, fairness_violations_gt = self.train(X, X_prime, y)
+            predictions = self.predict(X)
+            _, fn_violation = auditor.audit(predictions)
+            all_errors.append(errors_gt[-1])
+            all_fp_violations.append(fairness_violations_gt[-1])
+            all_fn_violations.append(fn_violation)
         '''
         plt.plot(all_errors, all_violations)
         plt.xlabel('error')
-        plt.ylabel('unfairness (fairness_violations*size)')
+        plt.ylabel('fairness violation')
         plt.title('error vs. unfairness: C = {}, max_iters = {}'.format(C, max_iters))
         plt.show()
         '''
-        return (all_errors, all_violations)
+        return (all_errors, all_fp_violations, all_fn_violations)
 
     def train(self, X, X_prime, y, alg="fict"):
         if alg == "fict":
@@ -229,271 +230,7 @@ class Model:
         self.gamma = gamma
         self.fairness_def = fairness_def
         self.predictor = predictor
-
-class Learner:
-    def __init__(self, X, y, predictor):
-        self.X = X
-        self.y = y
-        self.predictor = predictor
-
-    def best_response(self, costs_0, costs_1):
-        """Solve the CSC problem for the learner."""
-        reg0 = copy.deepcopy(self.predictor)
-        reg0.fit(self.X, costs_0)
-        reg1 = copy.deepcopy(self.predictor)
-        reg1.fit(self.X, costs_1)
-        func = RegOracle(reg0, reg1)
-        return func
+        if self.fairness_def != 'FP':
+            raise Exception('This metric is not yet supported for learning. Metric specified: {}.'.format(self.fairness_def))
 
 
-    # Inputs:
-    # q: the most recent classifier found
-    # A: the previous set of decisions (probabilities) up to time iter - 1
-    # iteration: the number of iteration
-    # Outputs:
-    # error: the error of the average classifier found thus far (incorporating q)
-    def generate_predictions(self, q, A, iteration):
-        """Return the classifications of the average classifier at time iter."""
-
-        new_preds = np.multiply(1.0 / iteration, q.predict(self.X))
-        ds = np.multiply((iteration - 1.0) / iteration, A)
-        ds = np.add(ds, new_preds)
-        error = np.mean([np.abs(ds[k] - self.y[k]) for k in range(len(self.y))])
-        return [error, ds]
-
-class Auditor:
-    """This is the Auditor class. It is used in the training algorithm to repeatedly find subgroups that break the
-    fairness disparity constraint. You can also use it independently as a stand alone auditor."""
-    def __init__(self, X_prime, y, fairness_def):
-        self.X_prime = X_prime
-        self.y = y
-        self.fairness_def = fairness_def
-        self.X_prime_0 = pd.DataFrame([self.X_prime.iloc[u, :] for u, s in enumerate(self.y) if s == 0])
-        self.X_prime_1 = pd.DataFrame([self.X_prime.iloc[u, :] for u, s in enumerate(self.y) if s == 1])
-
-
-    def get_baseline(self, y, y_hat):
-        if self.fairness_def == 'FP':
-            return np.mean([y_hat[i] for i, c in enumerate(y) if c == 0])
-        elif self.fairness_def == 'FN':
-            return np.mean([(1 - y_hat[i]) for i, c in enumerate(y) if c == 1])
-        elif self.fairness_def == 'SP':
-            return np.mean([(1-c)*(y_hat[i]) + c*(1-y_hat[i]) for i, c in enumerate(y)])
-
-    def update_costs(self, c_0, c_1, f, C, iteration, gamma):
-        """Recursively update the costs from incorrectly predicting 1 for the learner."""
-        # store whether FP disparity was + or -
-        pos_neg = f[4]
-        n = len(self.y)
-        if self.fairness_def == 'FP':
-            g_members = f[0].predict(self.X_prime_0)
-            m = self.X_prime_0.shape[0]
-            g_weight = np.sum(g_members)*(1.0/float(m))
-            for i in range(n):
-                X_prime_0_index = 0
-                if self.y[i] == 0:
-                    new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[X_prime_0_index])
-                    if np.abs(f[1]) < gamma:
-                        new_group_cost = 0
-                    c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-                    X_prime_0_index += 1
-                else:
-                    c_1[i] = -1.0/n
-            #print(c_1)
-
-        elif self.fairness_def == 'FN':
-            g_members = f[0].predict(self.X_prime_1)
-            m = self.X_prime_1.shape[0]
-            g_weight = np.sum(g_members)*(1.0/float(m))
-            for i in range(n):
-                X_prime_1_index = 0
-                if self.y[i] == 1:
-                    new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[X_prime_1_index])
-                    if np.abs(f[1]) < gamma:
-                        new_group_cost = 0
-                    c_0[i] = (c_0[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-                    X_prime_1_index += 1
-                else:
-                    c_0[i] = -1.0/n
-
-        elif self.fairness_def == 'SP':
-            g_members = f[0].predict(self.X_prime)
-            m = self.X_prime.shape[0]
-            g_weight = np.sum(g_members)*(1.0/float(m))
-            for i in range(n):
-                new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight - g_members[i])
-                if np.abs(f[1]) < gamma:
-                    new_group_cost = 0
-                c_1[i] = (c_1[i] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-        
-        return c_0, c_1
-
-    def get_subset(self, predictions):
-        if self.fairness_def == 'FP':
-            return self.X_prime_0, [a for u, a in enumerate(predictions) if self.y[u] == 0]
-        elif self.fairness_def == 'FN':
-            return self.X_prime_1, [a for u, a in enumerate(predictions) if self.y[u] == 1]
-        elif self.fairness_def == 'SP':
-            return self.X_prime, predictions
-
-    def get_group(self, predictions, metric_baseline):
-        """Given decisions on sensitive attributes, labels, and FP rate audit wrt
-            to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
-        """
-        X_subset, predictions_subset = self.get_subset(predictions)
-
-        m = len(predictions_subset)
-        n = float(len(self.y))
-
-        if self.fairness_def == "FP":
-            cost_0 = [0.0] * m
-            cost_1 = -1.0 / n * (metric_baseline - predictions_subset)
-        else:
-            cost_1 = [0.0] * m
-            cost_0 = -1.0 / n * (metric_baseline - predictions_subset)
-        
-        reg0 = linear_model.LinearRegression()
-        reg0.fit(X_subset, cost_0)
-        reg1 = linear_model.LinearRegression()
-        reg1.fit(X_subset, cost_1)
-        func = RegOracle(reg0, reg1)
-        group_members_0 = func.predict(X_subset)
-        err_group = np.mean([np.abs(group_members_0[i] - predictions_subset[i])
-                             for i in range(len(predictions_subset))])
-        
-        # get the false positive rate in group
-        if sum(group_members_0) == 0:
-            fp_group_rate = 0
-        else:
-            fp_group_rate = np.mean([r for t, r in enumerate(predictions_subset) if group_members_0[t] == 1])
-        g_size_0 = np.sum(group_members_0) * 1.0 / n
-        fp_disp = np.abs(fp_group_rate - metric_baseline)
-        fp_disp_w = fp_disp * g_size_0
-
-
-        # negation
-        if self.fairness_def == "FP":
-            cost_0_neg = [0.0] * m
-            cost_1_neg = -1.0 / n * (predictions_subset - metric_baseline)
-        else:
-            cost_1_neg = [0.0] * m
-            cost_0_neg = -1.0 / n * (predictions_subset - metric_baseline)
-
-        reg0_neg = linear_model.LinearRegression()
-        reg0_neg.fit(X_subset, cost_0_neg)
-        reg1_neg = linear_model.LinearRegression()
-        reg1_neg.fit(X_subset, cost_1_neg)
-        func_neg = RegOracle(reg0_neg, reg1_neg)
-        group_members_0_neg = func_neg.predict(X_subset)
-        err_group_neg = np.mean(
-            [np.abs(group_members_0_neg[i] - predictions_subset[i]) for i in range(len(predictions_subset))])
-        
-        if sum(group_members_0_neg) == 0:
-            fp_group_rate_neg = 0
-        else:
-            # update 
-            fp_group_rate_neg = np.mean([r for t, r in enumerate(predictions_subset) if group_members_0[t] == 0])
-        g_size_0_neg = np.sum(group_members_0_neg) * 1.0 / n
-        fp_disp_neg = np.abs(fp_group_rate_neg - metric_baseline)
-        fp_disp_w_neg = fp_disp_neg*g_size_0_neg
-
-        # return group
-        if fp_disp_w_neg > fp_disp_w:
-            return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
-        else:
-            return [func, fp_disp_w, fp_disp, err_group, 1]
-
-    def audit(self, predictions):
-        """Takes in predictions on dataset (X',y) and returns:
-            a vector which represents the group that violates the fairness metric, along with the u.
-        """
-        if isinstance(predictions, pd.DataFrame):
-            predictions = predictions.values
-
-        metric_baseline = self.get_baseline(self.y, predictions)
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, metric_baseline)
-
-        return aud_group.predict(self.X_prime), gamma_unfair
-
-
-# helper function for torch support
-def xavier_init(m):
-    if type(m) == nn.Linear:
-        torch.nn.init.xavier_uniform(m.weight)
-        m.bias.data.fill_(0.01)
-
-def constant_init(m):
-    if type(m) == nn.Linear:
-        torch.nn.init.constant(m.weight)
-        m.bias.data.fill_(0.01)
-
-
-class TorchPredictor:
-    """Takes in a neural network defined in torch and outputs a valid Predictor"""
-
-    def __init__(self, nn, criterion, optimizer, batch_size, initialization=xavier_init, device=False):
-        self.nn = nn
-        self.criterion = criterion
-        self.optimizer = optimizer
-        self.batch_size = batch_size
-        self.device = device
-        self.initialization = initialization
-
-    def fit(self, X, costs):
-
-        #X_tensor = torch.from_numpy(X.values).float()
-        costs_tensor = torch.tensor(costs).float()
-        print(costs_tensor)
-
-        dataset = Intersectional_Dataset(X, costs)
-        # define the dataloader to iterate through dataset
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=2)
-
-        num_epochs = 1000
-        for epoch in range(num_epochs):  # loop over the dataset multiple times
-            for i, data in enumerate(dataloader, 0):
-                # get the inputs
-                x = data['x'].float()
-                y = data['y'].float()
-                if self.device:
-                    x, y = x.to(device), y.to(device)
-
-                # zero the parameter gradients
-                self.optimizer.zero_grad()
-
-                # forward + backward + optimize
-                outputs = self.nn(x)
-                loss = self.criterion(outputs, y)
-                loss.backward()
-                self.optimizer.step()
-
-                # print statistics
-                if i == 0 and (epoch % (num_epochs / 10) == 0):
-                    print('[%d, %5d] loss: %.12f' %
-                          (epoch, i, loss.item()))
-
-        print('Finished Training')
-        return self
-
-        # num_iter = 5000
-        # for epoch in range(0, num_iter + 1):  # loop over the dataset multiple times
-        #
-        #     # zero the parameter gradients
-        #     self.optimizer.zero_grad()
-        #
-        #     # forward + backward + optimize
-        #     outputs = self.nn(X_tensor)
-        #     loss = self.criterion(outputs, costs_tensor)
-        #     loss.backward()
-        #     self.optimizer.step()
-        #
-        #     if epoch % (num_iter / 10) == 0:  # print every 100 mini-batches
-        #         print('[%d] loss: %.12f' %
-        #               (epoch, loss.item()))
-        #
-        # print('Finished Training')
-        # return self
-
-    def predict(self, x_series):
-        x_tensor = torch.from_numpy(x_series).float()
-        return self.nn(x_tensor).detach().numpy()

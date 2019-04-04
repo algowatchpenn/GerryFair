@@ -1,81 +1,52 @@
 import gerryfair
-from gerryfair.model import *
-from gerryfair.clean import *
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+from gerryfair.model import Model
+from gerryfair.clean import clean_dataset
+from gerryfair.oracles import TorchPredictor, ThreeLayerNet
 
 from sklearn import svm
 from sklearn import tree
 from sklearn.kernel_ridge import KernelRidge
 from sklearn import linear_model
 
+import torch.nn as nn
+import torch.optim as optim
 import pickle
 
+import matplotlib.pyplot as plt
 
 dataset = "./dataset/communities.csv"
 attributes = "./dataset/communities_protected.csv"
 centered = True
 X, X_prime, y = clean_dataset(dataset, attributes, centered)
 
-# 3-layer relu network
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        num_hidden1 = 32
-        num_hidden2 = 8
-        self.lin1 = nn.Linear(X.shape[1], num_hidden1)
-        self.lin2 = nn.Linear(num_hidden1, num_hidden2)
-        self.lin3 = nn.Linear(num_hidden2, 1)
-
-    def forward(self, x):
-        x = F.relu(self.lin1(x))
-        x = self.lin2(x)
-        x = self.lin3(x)
-        return x
-
-
 def single_trial():
     ln_predictor = linear_model.LinearRegression()
-
     svm_predictor = svm.LinearSVR()
-
     tree_predictor = tree.DecisionTreeRegressor()
-
     kernel_predictor = KernelRidge(alpha=1.0, gamma=1.0, kernel='rbf')
-
-
     C = 15
     printflag = True
     gamma = 0.1
     max_iter = 10
     fair_clf = Model(C=C, printflag=printflag, gamma=gamma, predictor=kernel_predictor, max_iters=max_iter)
-
     fair_clf.train(X, X_prime, y)
 
-
-
-
 def multiple_comparision():
-
-
-    net = Net()
+    net = ThreeLayerNet(X.shape[1])
     criterion = nn.MSELoss()
     optimizer = optim.Adam(net.parameters(), lr=.5)
-    nn_predictor = TorchPredictor(net, criterion, optimizer, 500, initialization=constant_init, device=False)
 
+    nn_predictor = TorchPredictor(nn=net, criterion=criterion, optimizer=optimizer)
     ln_predictor = linear_model.LinearRegression()
-
     svm_predictor = svm.LinearSVR()
-
     tree_predictor = tree.DecisionTreeRegressor()
-
     kernel_predictor = KernelRidge(alpha=1.0, gamma=1.0, kernel='rbf')
-
     C = 15
     printflag = False
-    predictor_dict = {'Linear': ln_predictor, 'SVR': svm_predictor,
-                      'DT': tree_predictor, 'RBF Kernel': kernel_predictor}
+    predictor_dict = {'Linear': ln_predictor,
+                      'SVR': svm_predictor,
+                      'DT': tree_predictor,
+                      'RBF Kernel': kernel_predictor}
     gamma_list = [0.01]
     max_iter_list = [5]
     results_dict = {}
@@ -91,8 +62,38 @@ def multiple_comparision():
             results_dict[curr_predictor] = {'Errors' : all_errors, 'FP_disp': all_fp}
 
     print(results_dict)
+    #pickle.dump(results_dict, open('results_max' + str(max_iter_list) + '_gammas' + str(gamma_list) + '.pkl', 'wb'))
 
-    pickle.dump(results_dict, open('results_max' + str(max_iters) + '_gammas' + str(gamma_list) + '.pkl', 'wb'))
 
+def multiple_pareto():
+    gamma_list = [0.005, 0.01, 0.02, 0.05, 0.1]
 
-single_trial()
+    train_size = 1000
+    X_train = X.iloc[:train_size]
+    X_prime_train = X_prime.iloc[:train_size]
+    y_train = y.iloc[:train_size]
+
+    ln_predictor = linear_model.LinearRegression()
+    svm_predictor = svm.LinearSVR()
+    tree_predictor = tree.DecisionTreeRegressor(max_depth=5)
+    kernel_predictor = KernelRidge(alpha=1.0, gamma=1.0, kernel='rbf')
+    predictor_dict = {'Linear': {'predictor': ln_predictor, 'iters': 300},
+                      'SVR': {'predictor': svm_predictor, 'iters': 300},
+                      'DT': {'predictor': tree_predictor, 'iters': 10}}
+
+    for pred in predictor_dict:
+        print('Curr Predictor: {}'.format(pred))
+        predictor = predictor_dict[pred]['predictor']
+        max_iters = predictor_dict[pred]['iters']
+        fair_clf = Model(C=100, printflag=True, gamma=1, predictor=predictor, max_iters=max_iters)
+        fair_clf.set_options(max_iters=max_iters)
+        errors, fp_violations, fn_violations = fair_clf.pareto(X_train, X_prime_train, y_train, gamma_list)
+        plt.plot(errors, fp_violations, label=pred)
+    
+    plt.xlabel('Error')
+    plt.ylabel('Unfairness')
+    plt.legend()
+    plt.title('Error vs. Unfairness\n(Communities & Crime Dataset)')
+    plt.show()
+
+multiple_pareto()
