@@ -16,7 +16,6 @@ class Model:
     """Model object for fair learning and classification"""
 
     def fictitious_play(self,
-
                         X,
                         X_prime,
                         y,
@@ -116,13 +115,13 @@ class Model:
                 y_hat = np.add(y_hat, new_preds)
         return [1 if y > .5 else 0 for y in y_hat]
 
-
     def pareto(self, X, X_prime, y, gamma_list):
         '''Assumes Model has FP specified for metric. 
         Trains for each value of gamma, returns error, FP (via training), and FN (via auditing) values.'''
 
         C=self.C
         max_iters=self.max_iters
+
         # Store errors and fp over time for each gamma
 
         # change var names, but no real dependence on FP logic
@@ -206,137 +205,4 @@ class Model:
         if self.fairness_def not in ['FP', 'FN']:
             raise Exception('This metric is not yet supported for learning. Metric specified: {}.'.format(self.fairness_def))
 
-<<<<<<< HEAD
-class Learner:
-    def __init__(self, X, y):
-        self.X = X
-        self.y = y
-
-
-    def best_response(self, c_1t):
-        # should be passed c_0, c_1
-
-        """Solve the CSC problem for the learner."""
-        n = len(self.y)
-        c_1t_new = c_1t[:]
-        c_0 = [0.0] * n
-        c_1 = []
-        for r in range(n):
-            if self.y[r] == 1:
-                c_1.append((-1.0/n))
-            else:
-                c_1.append(c_1t_new.pop(0))
-        reg0 = linear_model.LinearRegression()
-        reg0.fit(self.X, c_0)
-        reg1 = linear_model.LinearRegression()
-        reg1.fit(self.X, c_1)
-        func = RegOracle(reg0, reg1)
-        return func
-
-
-    # Inputs:
-    # A: the previous set of decisions (probabilities) up to time iter - 1
-    # q: the most recent classifier found
-    # x: the dataset
-    # y: the labels
-    # iter: the iteration
-    # Outputs:
-    # error: the error of the average classifier found thus far (incorporating q)
-    def generate_predictions(self, q, prev_decisions, iteration):
-        """Return the classifications of the average classifier at time iter."""
-
-        new_preds = np.multiply(1.0 / iteration, q.predict(self.X))
-        old_preds = np.multiply((iteration - 1.0) / iteration, prev_decisions)
-        preds_mixture = np.add(old_preds, new_preds)
-        error = np.mean([np.abs(preds_mixture[k] - self.y[k]) for k in range(len(self.y))])
-        return [error, ds]
-
-class Auditor:
-    """docstring for Auditor"""
-    def update_costs(self, c_1, f, X_prime, y, C, iteration, fp_disp, gamma):
-        """Recursively update the costs from incorrectly predicting 1 for the learner."""
-        # store whether FP disparity was + or - (UPDATE for FN/SP)
-        pos_neg = f[4]
-        X_0_prime = pd.DataFrame([X_prime.iloc[u, :] for u,s in enumerate(y) if s == 0])
-        g_members = f[0].predict(X_0_prime)
-        m = len(c_1)
-        n = float(len(y))
-        g_weight_0 = np.sum(g_members)*(1.0/float(m))
-        for t in range(m):
-            new_group_cost = (1.0/n)*pos_neg*C*(1.0/iteration) * (g_weight_0 - g_members[t])
-            if np.abs(fp_disp) < gamma:
-                if t == 0:
-                    print('barrier')
-                new_group_cost = 0
-            c_1[t] = (c_1[t] - 1.0/n) * ((iteration-1.0)/iteration) + new_group_cost + 1.0/n
-        return c_1
-
-    def get_group(self, A, X_sens, y_g, FP):
-        """Given decisions on sensitive attributes, labels, and FP rate audit wrt
-            to gamma unfairness. Return the group found, the gamma unfairness, fp disparity, and sign(fp disparity).
-
-            (UPDATE for FN/SP)
-        """
-
-        A_0 = [a for u, a in enumerate(A) if y_g[u] == 0]
-        X_0 = pd.DataFrame([X_sens.iloc[u, :]
-                            for u, s in enumerate(y_g) if s == 0])
-        m = len(A_0)
-        n = float(len(y_g))
-        cost_0 = [0.0] * m
-        cost_1 = -1.0 / n * (FP - A_0)
-        reg0 = linear_model.LinearRegression()
-        reg0.fit(X_0, cost_0)
-        reg1 = linear_model.LinearRegression()
-        reg1.fit(X_0, cost_1)
-        func = RegOracle(reg0, reg1)
-        group_members_0 = func.predict(X_0)
-        err_group = np.mean([np.abs(group_members_0[i] - A_0[i])
-                             for i in range(len(A_0))])
-        # get the false positive rate in group
-        if sum(group_members_0) == 0:
-            fp_group_rate = 0
-        else:
-            fp_group_rate = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 1])
-        g_size_0 = np.sum(group_members_0) * 1.0 / n
-        fp_disp = np.abs(fp_group_rate - FP)
-        fp_disp_w = fp_disp * g_size_0
-
-        # negation
-        cost_0_neg = [0.0] * m
-        cost_1_neg = -1.0 / n * (A_0-FP)
-        reg0_neg = linear_model.LinearRegression()
-        reg0_neg.fit(X_0, cost_0_neg)
-        reg1_neg = linear_model.LinearRegression()
-        reg1_neg.fit(X_0, cost_1_neg)
-        func_neg = RegOracle(reg0_neg, reg1_neg)
-        group_members_0_neg = func_neg.predict(X_0)
-        err_group_neg = np.mean(
-            [np.abs(group_members_0_neg[i] - A_0[i]) for i in range(len(A_0))])
-        if sum(group_members_0_neg) == 0:
-            fp_group_rate_neg = 0
-        else:
-            fp_group_rate_neg = np.mean([r for t, r in enumerate(A_0) if group_members_0[t] == 0])
-        g_size_0_neg = np.sum(group_members_0_neg) * 1.0 / n
-        fp_disp_neg = np.abs(fp_group_rate_neg - FP)
-        fp_disp_w_neg = fp_disp_neg*g_size_0_neg
-
-        # return group
-        if fp_disp_w_neg > fp_disp_w:
-            return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
-        else:
-            return [func, fp_disp_w, fp_disp, err_group, 1]
-
-    def audit(self, predictions, X_prime, y):
-        """Takes in predictions on dataset (X',y) and prints gamma-unfairness,
-        fp disparity, group size, group coefficients, and sensitive column names.
-
-        (UPDATE for FN/SP)
-        """
-        if isinstance(predictions, pd.DataFrame):
-            predictions = predictions.values
-        FP = np.mean([p for i,p in enumerate(predictions) if y[i] == 0])
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, X_sens=X_prime, y_g=y, FP=FP)
-=======
->>>>>>> staging
 
