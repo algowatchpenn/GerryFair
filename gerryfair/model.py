@@ -86,7 +86,6 @@ class Model:
                     group.weighted_disparity,
                     group.group_size))
 
-    
     def save_heatmap(self, iteration, X, X_prime, y, predictions, vmin, vmax):
         '''Helper method: save heatmap frame'''
 
@@ -101,7 +100,6 @@ class Model:
                 vmax = minmax[1]
         return vmin, vmax
 
-    
     def predict(self, X):
         ''' Generates predictions. We do not yet advise using this in sensitive real-world settings. '''
 
@@ -143,7 +141,6 @@ class Model:
 
         return (all_errors, all_fp_violations, all_fn_violations)
 
-    
     def train(self, X, X_prime, y, alg="fict"):
         ''' Trains a subgroup-fair model using provided data and specified parameters. '''
 
@@ -153,7 +150,6 @@ class Model:
         else:
             raise Exception("Specified algorithm is invalid")
 
-    
     def set_options(self, C=None,
                         printflag=None,
                         heatmapflag=None,
@@ -181,7 +177,6 @@ class Model:
         if fairness_def:
             self.fairness_def = fairness_def
 
-
     def __init__(self, C=10,
                         metric='FP',
                         printflag=False,
@@ -204,5 +199,3 @@ class Model:
         self.predictor = predictor
         if self.fairness_def not in ['FP', 'FN']:
             raise Exception('This metric is not yet supported for learning. Metric specified: {}.'.format(self.fairness_def))
-
-
