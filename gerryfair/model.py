@@ -5,6 +5,7 @@ import gerryfair.fairness_plots
 import gerryfair.heatmap
 from gerryfair.learner import Learner
 from gerryfair.auditor import Auditor
+from gerryfair.classifier_history import ClassifierHistory
 from gerryfair.reg_oracle_class import RegOracle
 import matplotlib
 
@@ -15,128 +16,85 @@ class Model:
     """Model object for fair learning and classification"""
     
     # Fictitious Play Algorithm
-    # Input: dataset cleaned into X, X_prime, y, and arguments from commandline
+    # Input: dataset cleaned into X, X_prime, y, and arguments from   commandline
     # Output: for each iteration the error and fairness violation - heatmap can also be produced
-    def _fictitious_play(self,
+    def fictitious_play(self,
                         X,
                         X_prime,
-                        y):
+                        y,
+                        early_termination=True):
 
         # defining variables and data structures for algorithm
         learner = Learner(X, y, self.predictor)
         auditor = Auditor(X_prime, y, self.fairness_def)
+        history = ClassifierHistory()
 
+        # initialize variables
         n = X.shape[0]
-        m = len([s for s in y if s == 0])
-
-        # set default costs
-        if self.fairness_def == 'FP':
-            costs_0 = [0.0] * n
-            costs_1 = [-1.0 / n * (2 * i - 1) for i in y]
-            X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 0])
-        elif self.fairness_def == 'FN':
-            costs_0 = [0.0] * n
-            costs_1 = [1.0 / n * (2 * i - 1) for i in y]
-            X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 1])
-
-        p = [learner.best_response(costs_0, costs_1)]
-        iteration = 1
-        errors_t = []
-        fairness_violations_t = []
-        coef_t = []
-        size_t = []
-        groups = []
-        cum_group_mems = []
-        m = len([s for s in y if s == 0])
+        costs_0, costs_1, X_0 = auditor.initialize_costs(n)
         metric_baseline = 0
         predictions = [0.0] * n
-        group_membership = [0.0] * n
 
         # scaling variables for heatmap
         vmin = None
         vmax = None
 
+        # print output variables
+        errors = []
+        fairness_violations = []
+
+        iteration = 1
         while iteration < self.max_iters:
-            print('iteration: {}'.format(int(iteration)))
-
-            # get t-1 mixture decisions on X by randomizing on current set of p
-            emp_p = learner.generate_predictions(p[-1], predictions, iteration)
-            # get the error of the t-1 mixture classifier
-            err = emp_p[0]
-            # Average decisions
-            predictions = emp_p[1]
-
-            # update FP to get the false positive rate of the mixture classifier
-            predictions_recent = p[-1].predict(X)
-
-            # fairness metric baseline rate of t-1 mixture on new group g_t
-            metric_baseline_recent = auditor.get_baseline(y, predictions) 
-            metric_baseline = ((iteration - 1.0) / iteration) * metric_baseline + metric_baseline_recent * (1.0 / iteration)
+            # learner's best response: solve the CSC problem, get mixture decisions on X to update prediction probabilities
+            history.append_classifier(learner.best_response(costs_0, costs_1)) 
+            (error, predictions) = learner.generate_predictions(history.get_most_recent(), predictions, iteration)
             
-            # dual player best responds to strategy up to t-1
-            f = auditor.get_group(predictions, metric_baseline)
-
-            group_size_0 = np.sum(f[0].predict(X_0)) * (1.0 / n)
-
-            # compute list of people who have been included in an identified subgroup up to time t
-            group_membership = np.add(group_membership, f[0].predict(X_prime))
-            group_membership = [g != 0 for g in group_membership]
-            group_members_t = np.sum(group_membership)
-            cum_group_mems.append(group_members_t)
-
-            # compute learner's best response to the CSC problem
-            p_t = learner.best_response(costs_0, costs_1)            
-            A_t = p_t.predict(X)
-
-            # append new group, new p, fairness_violations of group found, coefficients, group size
-            groups.append(f[0])
-            p.append(p_t)
-            fairness_violations_t.append(np.abs(f[1]))
-            errors_t.append(err)
-            coef_t.append(f[0].b0.coef_ - f[0].b1.coef_)
+            # auditor's best response: find group, update costs
+            metric_baseline = auditor.get_baseline(y, predictions) 
+            group = auditor.get_group(predictions, metric_baseline)
+            costs_0, costs_1 = auditor.update_costs(costs_0, costs_1, group, self.C, iteration, self.gamma)
 
             # outputs
-            if iteration == 1:
-                print(
-                    'most accurate classifier accuracy: {}, most acc-class unfairness: {}, most acc-class size {}'.format(
-                        err,
-                        fairness_violations_t[0],
-                        group_size_0))
-
-            if self.printflag:
-                print(
-                    'ave error: {}, gamma-unfairness: {}, group_size: {}, frac included ppl: {}'.format('{:f}'.format(err),
-                                                                                                        '{:f}'.format(
-                                                                                                            np.abs(f[1])),
-                                                                                                        '{:f}'.format(
-                                                                                                            group_size_0),
-                                                                                                        '{:f}'.format(
-                                                                                                            cum_group_mems[
-                                                                                                                -1] / float(
-                                                                                                                n))))
-            # save heatmap every heatmap_iter iterations
-            if self.heatmapflag and (iteration % self.heatmap_iter) == 0:
-                
-                A_heat = A
-                # initial heat map
-                X_prime_heat = X_prime.iloc[:, 0:2]
-                eta = 0.1
-
-                minmax = heatmap.heat_map(X, X_prime_heat, y, A_heat, eta, self.heatmap_path + '/heatmap_iteration_{}'.format(iteration), vmin, vmax)
-                if iteration == 1:
-                    vmin = minmax[0]
-                    vmax = minmax[1]
-
-            # update costs: the primal player best responds
-            costs_0, costs_1 = auditor.update_costs(costs_0, costs_1, f, self.C, iteration, self.gamma)
+            errors.append(error)
+            fairness_violations.append(group.weighted_disparity)
+            self.print_outputs(iteration, error, group)
+            vmin, vmax = self.save_heatmap(iteration, X, X_prime, y, history.get_most_recent().predict(X), vmin, vmax)
             iteration += 1
 
             # early termination:
-            if (len(errors_t) >= 5) and ((errors_t[-1] == errors_t[-2]) or fairness_violations_t[-1] == fairness_violations_t[-2]) and fairness_violations_t[-1] < self.gamma:
+            if early_termination and (len(errors) >= 5) and ((errors[-1] == errors[-2]) or fairness_violations[-1] == fairness_violations[-2]) and fairness_violations[-1] < self.gamma:
                 iteration = self.max_iters
 
-        self.classifiers = p
-        return errors_t, fairness_violations_t
+        self.classifiers = history.classifiers
+        return errors, fairness_violations
+
+    def print_outputs(self, iteration, error, group):
+        print('iteration: {}'.format(int(iteration)))
+        if iteration == 1:
+            print(
+                'most accurate classifier accuracy: {}, most accurate class unfairness: {}, violated group size: {}'.format(
+                    error,
+                    group.weighted_disparity,
+                    group.group_size))
+
+        if self.printflag:
+            print(
+                'error: {}, fairness violation: {}, violated group_size: {}'.format(
+                    error,
+                    group.weighted_disparity,
+                    group.group_size))
+
+    def save_heatmap(self, iteration, X, X_prime, y, predictions, vmin, vmax):
+        # save heatmap every heatmap_iter iterations
+        if self.heatmapflag and (iteration % self.heatmap_iter) == 0:
+            # initial heat map
+            X_prime_heat = X_prime.iloc[:, 0:2]
+            eta = 0.1
+            minmax = heatmap.heat_map(X, X_prime_heat, y, predictions_t, eta, self.heatmap_path + '/heatmap_iteration_{}'.format(iteration), vmin, vmax)
+            if iteration == 1:
+                vmin = minmax[0]
+                vmax = minmax[1]
+        return vmin, vmax
 
     def predict(self, X):
         num_classifiers = len(self.classifiers)
@@ -169,18 +127,12 @@ class Model:
             all_errors.append(errors_gt[-1])
             all_fp_violations.append(fairness_violations_gt[-1])
             all_fn_violations.append(fn_violation)
-        '''
-        plt.plot(all_errors, all_violations)
-        plt.xlabel('error')
-        plt.ylabel('fairness violation')
-        plt.title('error vs. unfairness: C = {}, max_iters = {}'.format(C, max_iters))
-        plt.show()
-        '''
+
         return (all_errors, all_fp_violations, all_fn_violations)
 
     def train(self, X, X_prime, y, alg="fict"):
         if alg == "fict":
-            err, fairness_violations = self._fictitious_play(X, X_prime, y)
+            err, fairness_violations = self.fictitious_play(X, X_prime, y)
             return err, fairness_violations
         else:
             print("Specified algorithm is invalid")

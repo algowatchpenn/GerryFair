@@ -5,15 +5,14 @@ dataset = "./dataset/communities.csv"
 attributes = "./dataset/communities_protected.csv"
 centered = True
 X, X_prime, y = gerryfair.clean.clean_dataset(dataset, attributes, centered)
-C = 15
+C = 10
 printflag = True
 gamma = .01
 fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairness_def='FP')
-max_iters = 50
+max_iters = 200
 fair_model.set_options(max_iters=max_iters)
 
 # Train Set
-
 train_size = 500
 
 X_train = X.iloc[:train_size]

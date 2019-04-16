@@ -3,6 +3,20 @@ import pandas as pd
 from sklearn import linear_model
 from gerryfair.reg_oracle_class import RegOracle
 
+class Group(object):
+    """docstring for Group"""
+
+    def return_f(self):
+        return [self.func, self.weighted_disparity, self.disparity, self.group_err, self.disparity_direction]
+
+    def __init__(self, func, group_size, weighted_disparity, disparity, group_err, disparity_direction):
+        super(Group, self).__init__()
+        self.func = func
+        self.group_size = group_size
+        self.weighted_disparity = weighted_disparity
+        self.disparity = disparity
+        self.group_err = group_err
+        self.disparity_direction = disparity_direction
 
 class Auditor:
     """This is the Auditor class. It is used in the training algorithm to repeatedly find subgroups that break the
@@ -20,6 +34,18 @@ class Auditor:
         self.X_prime_0 = pd.DataFrame([self.X_prime.iloc[u, :] for u, s in enumerate(self.y) if s == 0])
         self.X_prime_1 = pd.DataFrame([self.X_prime.iloc[u, :] for u, s in enumerate(self.y) if s == 0])
 
+    def initialize_costs(self, n):
+        costs_0 = None
+        costs_1 = None
+        if self.fairness_def == 'FP':
+            costs_0 = [0.0] * n
+            costs_1 = [-1.0 / n * (2 * i - 1) for i in self.y_input]
+            
+        elif self.fairness_def == 'FN':
+            costs_0 = [0.0] * n
+            costs_1 = [1.0 / n * (2 * i - 1) for i in self.y_input]
+            #X_0 = pd.DataFrame([X_prime.iloc[u, :] for u, s in enumerate(y) if s == 1])
+        return costs_0, costs_1, self.X_prime_0
 
     def get_baseline(self, y, y_hat):
         if self.fairness_def == 'FP':
@@ -27,9 +53,10 @@ class Auditor:
         elif self.fairness_def == 'FN':
             return np.mean([(1 - y_hat[i]) for i, c in enumerate(y) if c == 1])
 
-    def update_costs(self, c_0, c_1, f, C, iteration, gamma):
+    def update_costs(self, c_0, c_1, group, C, iteration, gamma):
         """Recursively update the costs from incorrectly predicting 1 for the learner."""
         # store whether FP disparity was + or -
+        f = group.return_f()
         pos_neg = f[4]
         n = len(self.y)
 
@@ -108,9 +135,9 @@ class Auditor:
 
         # return group
         if (fp_disp_w_neg > fp_disp_w):
-            return [func_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1]
+            return Group(func_neg, g_size_0_neg, fp_disp_w_neg, fp_disp_neg, err_group_neg, -1)
         else:
-            return [func, fp_disp_w, fp_disp, err_group, 1]
+            return Group(func, g_size_0, fp_disp_w, fp_disp, err_group, 1)
 
     def audit(self, predictions):
         """Takes in predictions on dataset (X',y) and returns:

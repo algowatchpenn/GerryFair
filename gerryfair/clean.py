@@ -16,7 +16,6 @@ def setup():
     return [args.name, args.dataset, args.attributes, args.centered]
 
 
-
 '''
 Clean a dataset, given the filename for the dataset and the filename for the attributes.
 
@@ -96,8 +95,6 @@ def one_hot_code(df1, sens_dict):
 '''
 Given name of dataset, load in the three datasets associated from the clean.py file
 '''
-
-
 def get_data(dataset):
     X = pd.read_csv('dataset/' + dataset + '_features.csv')
     X_prime = pd.read_csv('dataset/' + dataset + '_protectedfeatures.csv')

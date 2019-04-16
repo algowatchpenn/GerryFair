@@ -8,10 +8,7 @@ from sklearn import tree
 from sklearn.kernel_ridge import KernelRidge
 from sklearn import linear_model
 
-import torch.nn as nn
-import torch.optim as optim
 import pickle
-
 import matplotlib.pyplot as plt
 
 dataset = "./dataset/communities.csv"
@@ -32,11 +29,6 @@ def single_trial():
     fair_clf.train(X, X_prime, y)
 
 def multiple_comparision():
-    net = ThreeLayerNet(X.shape[1])
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(net.parameters(), lr=.5)
-
-    nn_predictor = TorchPredictor(nn=net, criterion=criterion, optimizer=optimizer)
     ln_predictor = linear_model.LinearRegression()
     svm_predictor = svm.LinearSVR()
     tree_predictor = tree.DecisionTreeRegressor()
@@ -66,21 +58,20 @@ def multiple_comparision():
 
 
 def multiple_pareto():
-    gamma_list = [0.005, 0.01, 0.02, 0.05, 0.1]
+    gamma_list = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
 
-    train_size = 1000
+    train_size = X.shape[0]
     X_train = X.iloc[:train_size]
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
 
     ln_predictor = linear_model.LinearRegression()
     svm_predictor = svm.LinearSVR()
-    tree_predictor = tree.DecisionTreeRegressor(max_depth=5)
+    tree_predictor = tree.DecisionTreeRegressor(max_depth=3)
     kernel_predictor = KernelRidge(alpha=1.0, gamma=1.0, kernel='rbf')
-    predictor_dict = {'Linear': {'predictor': ln_predictor, 'iters': 300},
-                      'SVR': {'predictor': svm_predictor, 'iters': 300},
-                      'DT': {'predictor': tree_predictor, 'iters': 10},
-                      'Kernel': {'predictor': kernel_predictor, 'iters':10}}
+    predictor_dict = {'Linear': {'predictor': ln_predictor, 'iters': 100},
+                      'SVR': {'predictor': svm_predictor, 'iters': 10},
+                      'DT': {'predictor': tree_predictor, 'iters': 100}}
 
     results_dict = {}
 
