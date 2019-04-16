@@ -8,7 +8,7 @@ class Learner:
         self.X = X
         self.y = y
         self.predictor = predictor
-        
+
     def best_response(self, costs_0, costs_1):
         """Solve the CSC problem for the learner."""
         reg0 = copy.deepcopy(self.predictor)
@@ -31,4 +31,4 @@ class Learner:
         ds = np.multiply((iteration - 1.0) / iteration, A)
         ds = np.add(ds, new_preds)
         error = np.mean([np.abs(ds[k] - self.y[k]) for k in range(len(self.y))])
-        return [error, ds]
+        return (error, ds)
