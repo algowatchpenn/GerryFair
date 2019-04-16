@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 
 class Model:
     """Model object for fair learning and classification"""
-    
 
     def fictitious_play(self,
                         X,
@@ -75,7 +74,7 @@ class Model:
         print('iteration: {}'.format(int(iteration)))
         if iteration == 1:
             print(
-                'most accurate classifier accuracy: {}, most accurate class unfairness: {}, violated group size: {}'.format(
+                'most accurate classifier error: {}, most accurate class unfairness: {}, violated group size: {}'.format(
                     error,
                     group.weighted_disparity,
                     group.group_size))
@@ -162,7 +161,7 @@ class Model:
                         gamma=None,
                         fairness_def=None):
         ''' A method to switch the options before training. '''
-        
+
         if C:
             self.C = C
         if printflag:

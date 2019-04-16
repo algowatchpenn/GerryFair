@@ -38,11 +38,11 @@ class Auditor:
         costs_1 = None
         if self.fairness_def == 'FP':
             costs_0 = [0.0] * n
-            costs_1 = [-1.0 / n * (2 * i - 1) for i in self.y]
+            costs_1 = [-1.0 / n * (2 * i - 1) for i in self.y_input]
             
         elif self.fairness_def == 'FN':
             costs_1 = [0.0] * n
-            costs_0 = [1.0 / n * (2 * i - 1) for i in self.y]
+            costs_0 = [1.0 / n * (2 * i - 1) for i in self.y_input]
         return costs_0, costs_1, self.X_prime_0
 
     def get_baseline(self, y, y_hat):

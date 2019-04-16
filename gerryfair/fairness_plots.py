@@ -13,7 +13,6 @@ def plot_single(errors_t, fp_diff_t, max_iters, gamma, C):
     plt.ylabel('average error of mixture')
     plt.xlabel('iterations')
     plt.title('error vs. time: C: {}, gamma: {}'.format(C, gamma))
-    ax1.plot(x, [np.mean(y_t)] * len(y_t))
     plt.show()
 
     # plot fp disparity
