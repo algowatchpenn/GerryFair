@@ -6,7 +6,7 @@ over the protected attributes" (from Kearns et al., https://arxiv.org/abs/1711.0
 
 This repository contains python code for:
 * learning fair classifiers subject to subgroup fairness constraints (as described in https://arxiv.org/abs/1711.05144)
-* auditing standard classifiers from sklearn for fairness violations
+* auditing classifier predictions for fairness violations
 * visualizing tradeoffs between error and fairness metrics
 * fairness sensitive datasets for experiments (as used in https://arxiv.org/abs/1808.08166)
 
