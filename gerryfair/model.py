@@ -15,7 +15,10 @@ import matplotlib.pyplot as plt
 class Model:
     """Model object for fair learning and classification"""
 
-    def fictitious_play(self,
+    # Fictitious Play Algorithm
+    # Input: dataset cleaned into X, X_prime, y, and arguments from cleaning
+    # Output: for each iteration, the error and the fp difference - heatmap can also be produced
+    def _fictitious_play(self,
                         X,
                         X_prime,
                         y,
@@ -115,13 +118,13 @@ class Model:
                 y_hat = np.add(y_hat, new_preds)
         return [1 if y > .5 else 0 for y in y_hat]
 
-
     def pareto(self, X, X_prime, y, gamma_list):
         '''Assumes Model has FP specified for metric. 
         Trains for each value of gamma, returns error, FP (via training), and FN (via auditing) values.'''
 
         C=self.C
         max_iters=self.max_iters
+
         # Store errors and fp over time for each gamma
         all_errors = []
         all_fp_violations = []
