@@ -148,6 +148,6 @@ class Auditor:
             predictions = predictions.values
 
         metric_baseline = self.get_baseline(self.y_input, predictions)
-        aud_group, gamma_unfair, fp_in_group, err_group, pos_neg = self.get_group(predictions, metric_baseline)
+        group = self.get_group(predictions, metric_baseline)
 
-        return aud_group.predict(self.X_prime), gamma_unfair
+        return group.func.predict(self.X_prime), group.weighted_disparity
