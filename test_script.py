@@ -9,11 +9,11 @@ C = 10
 printflag = True
 gamma = .01
 fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairness_def='FP')
-max_iters = 200
+max_iters = 500
 fair_model.set_options(max_iters=max_iters)
 
 # Train Set
-train_size = 500
+train_size = 300
 
 X_train = X.iloc[:train_size]
 X_prime_train = X_prime.iloc[:train_size]

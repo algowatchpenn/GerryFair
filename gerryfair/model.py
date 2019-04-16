@@ -15,14 +15,17 @@ import matplotlib.pyplot as plt
 class Model:
     """Model object for fair learning and classification"""
     
-    # Fictitious Play Algorithm
-    # Input: dataset cleaned into X, X_prime, y, and arguments from   commandline
-    # Output: for each iteration the error and fairness violation - heatmap can also be produced
+
     def fictitious_play(self,
                         X,
                         X_prime,
                         y,
                         early_termination=True):
+        """
+        Fictitious Play Algorithm
+        Input: dataset cleaned into X, X_prime, y
+        Output: for each iteration the error and fairness violation - heatmap can also be produced. classifiers stored in class state.
+        """
 
         # defining variables and data structures for algorithm
         learner = Learner(X, y, self.predictor)
@@ -77,14 +80,17 @@ class Model:
                     group.weighted_disparity,
                     group.group_size))
 
-        if self.printflag:
+        elif self.printflag:
             print(
-                'error: {}, fairness violation: {}, violated group_size: {}'.format(
+                'error: {}, fairness violation: {}, violated group size: {}'.format(
                     error,
                     group.weighted_disparity,
                     group.group_size))
 
+    
     def save_heatmap(self, iteration, X, X_prime, y, predictions, vmin, vmax):
+        '''Helper method: save heatmap frame'''
+
         # save heatmap every heatmap_iter iterations
         if self.heatmapflag and (iteration % self.heatmap_iter) == 0:
             # initial heat map
@@ -96,9 +102,11 @@ class Model:
                 vmax = minmax[1]
         return vmin, vmax
 
+    
     def predict(self, X):
-        num_classifiers = len(self.classifiers)
+        ''' Generates predictions. We do not yet advise using this in sensitive real-world settings. '''
 
+        num_classifiers = len(self.classifiers)
         y_hat = None
         for c in self.classifiers: 
             new_preds = np.multiply(1.0 / num_classifiers, c.predict(X))
@@ -108,7 +116,11 @@ class Model:
                 y_hat = np.add(y_hat, new_preds)
         return [1 if y > .5 else 0 for y in y_hat]
 
+
     def pareto(self, X, X_prime, y, gamma_list):
+        '''Assumes Model has FP specified for metric. 
+        Trains for each value of gamma, returns error, FP (via training), and FN (via auditing) values.'''
+
         C=self.C
         max_iters=self.max_iters
         # Store errors and fp over time for each gamma
@@ -121,24 +133,26 @@ class Model:
         auditor = Auditor(X_prime, y, 'FN')
         for g in gamma_list:
             self.gamma = g
-            errors_gt, fairness_violations_gt = self.train(X, X_prime, y)
+            errors, fairness_violations = self.train(X, X_prime, y)
             predictions = self.predict(X)
             _, fn_violation = auditor.audit(predictions)
             all_errors.append(errors_gt[-1])
-            all_fp_violations.append(fairness_violations_gt[-1])
+            all_fp_violations.append(fairness_violations[-1])
             all_fn_violations.append(fn_violation)
 
         return (all_errors, all_fp_violations, all_fn_violations)
 
+    
     def train(self, X, X_prime, y, alg="fict"):
+        ''' Trains a subgroup-fair model using provided data and specified parameters. '''
+
         if alg == "fict":
             err, fairness_violations = self.fictitious_play(X, X_prime, y)
             return err, fairness_violations
         else:
-            print("Specified algorithm is invalid")
-            return
+            raise Exception("Specified algorithm is invalid")
 
-    ''' A method to switch the options before training'''
+    
     def set_options(self, C=None,
                         printflag=None,
                         heatmapflag=None,
@@ -147,6 +161,8 @@ class Model:
                         max_iters=None,
                         gamma=None,
                         fairness_def=None):
+        ''' A method to switch the options before training. '''
+        
         if C:
             self.C = C
         if printflag:
@@ -163,6 +179,7 @@ class Model:
             self.gamma = gamma
         if fairness_def:
             self.fairness_def = fairness_def
+
 
     def __init__(self, C=10,
                         printflag=False,
@@ -182,7 +199,7 @@ class Model:
         self.gamma = gamma
         self.fairness_def = fairness_def
         self.predictor = predictor
-        if self.fairness_def != 'FP':
+        if self.fairness_def not in ['FP', 'FN']:
             raise Exception('This metric is not yet supported for learning. Metric specified: {}.'.format(self.fairness_def))
 
 
