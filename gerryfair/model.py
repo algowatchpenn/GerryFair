@@ -178,7 +178,6 @@ class Model:
             self.fairness_def = fairness_def
 
     def __init__(self, C=10,
-                        metric='FP',
                         printflag=False,
                         heatmapflag=False,
                         heatmap_iter=10,
@@ -188,7 +187,6 @@ class Model:
                         fairness_def='FP',
                         predictor=linear_model.LinearRegression()):
         self.C = C
-        self.metric = metric
         self.printflag = printflag
         self.heatmapflag = heatmapflag
         self.heatmap_iter = heatmap_iter
