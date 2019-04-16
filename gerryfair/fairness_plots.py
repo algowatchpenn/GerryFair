@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -11,7 +13,6 @@ def plot_single(errors_t, fp_diff_t, max_iters, gamma, C):
     plt.ylabel('average error of mixture')
     plt.xlabel('iterations')
     plt.title('error vs. time: C: {}, gamma: {}'.format(C, gamma))
-    ax1.plot(x, [np.mean(y_t)] * len(y_t))
     plt.show()
 
     # plot fp disparity
@@ -25,7 +26,3 @@ def plot_single(errors_t, fp_diff_t, max_iters, gamma, C):
     plt.title('fp_diff*size vs. time: C: {}, gamma: {}'.format(C, gamma))
     ax2.plot(x, [gamma] * len(y_t))
     plt.show()
-
-def plot_pareto(all_errors, all_fp):
-    ## TODO: look at MATLAB code to print overlay of curves over time and pareto curves, test using cluster
-    return None
