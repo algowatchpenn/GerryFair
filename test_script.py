@@ -7,7 +7,7 @@ X, X_prime, y = gerryfair.clean.clean_dataset(dataset, attributes, centered)
 C = 10
 printflag = True
 gamma = .01
-fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairness_def='FN')
+fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairness_def='FP')
 max_iters = 5
 fair_model.set_options(max_iters=max_iters)
 
