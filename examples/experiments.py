@@ -1,12 +1,6 @@
 import pickle
 import gerryfair
 import matplotlib.pyplot as plt
-'''
-Experiments to run:
-- Pareto curve for several datasets (linear thresholds)
-- FP vs FN
-- Neural nets
-'''
 
 def multiple_pareto():
     communities_dataset = "./dataset/communities.csv"
@@ -18,39 +12,24 @@ def multiple_pareto():
     student_dataset = "./dataset/student-mat.csv"
     student_attributes = "./dataset/student_protected.csv"
 
-    C = 100
+    C = 10
     printflag = True
     gamma = .01
     fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairness_def='FP')
     gamma_list = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2]
     centered = True
 
-    
-
-
-    """
-    X_train = X.iloc[:train_size]
-    X_prime_train = X_prime.iloc[:train_size]
-    y_train = y.iloc[:train_size]
-    """
-
     # Train Set (Communities)
     X, X_prime, y = gerryfair.clean.clean_dataset(communities_dataset, communities_attributes, centered)
 
     # Train the model (size=1000, iters=200)
-    train_size = 1000
-    max_iters = 200
+    train_size = 200
+    max_iters = 1000
     X_train = X.iloc[:train_size]
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
     fair_model.set_options(max_iters=max_iters)
-    #communities_all_errors, communities_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
-
-
-    (communities_all_errors, communities_all_violations) = (None, None)
-    with open('communities_1000_200.txt', 'r') as file: # 'w+'
-        #pickle.dump((communities_all_errors, communities_all_violations), file)
-        (communities_all_errors, communities_all_violations) = pickle.load(file)
+    communities_all_errors, communities_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
     
     # Train Set (Law School)
@@ -65,9 +44,6 @@ def multiple_pareto():
     fair_model.set_options(max_iters=max_iters)
     lawschool_all_errors, lawschool_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
-    
-    with open('lawschool_500_2000.txt', 'w+') as file:
-        pickle.dump((lawschool_all_errors, lawschool_all_violations), file)
 
     # Train Set (Adult Income)
     X, X_prime, y = gerryfair.clean.clean_dataset(adult_dataset, adult_attributes, centered)
@@ -81,10 +57,6 @@ def multiple_pareto():
     fair_model.set_options(max_iters=max_iters)
     adult_all_errors, adult_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
-    with open('adult_500_2000.txt', 'w+') as file:
-        pickle.dump((adult_all_errors, adult_all_violations), file)
-
-
     # Train Set (Adult Income)
     X, X_prime, y = gerryfair.clean.clean_dataset(student_dataset, student_attributes, centered)
 
@@ -97,10 +69,6 @@ def multiple_pareto():
     fair_model.set_options(max_iters=max_iters)
     student_all_errors, student_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
-    with open('student_500_2000.txt', 'w+') as file:
-        pickle.dump((student_all_errors, student_all_violations), file)
-
-
     plt.plot(communities_all_errors, communities_all_violations, label='communities')
     plt.plot(lawschool_all_errors, lawschool_all_violations, label='law school')
     plt.plot(adult_all_errors, adult_all_violations, label='adult')
@@ -110,7 +78,6 @@ def multiple_pareto():
     plt.legend()
     plt.title('error vs. unfairness (iterations = {})'.format(max_iters))
     plt.show()
-
 
     print("done")
 
@@ -126,12 +93,6 @@ def fp_vs_fn():
     fair_model = gerryfair.model.Model(C=C, printflag=printflag, gamma=gamma, fairness_def='FP', max_iters=max_iters)
     gamma_list = [0.001, 0.002, 0.003, 0.004, 0.005, 0.0075, 0.01, 0.02, 0.03, 0.05]
     centered = True
-
-    """
-    X_train = X.iloc[:train_size]
-    X_prime_train = X_prime.iloc[:train_size]
-    y_train = y.iloc[:train_size]
-    """
 
     # Train Set (Communities)
     X, X_prime, y = gerryfair.clean.clean_dataset(communities_dataset, communities_attributes, centered)
@@ -169,7 +130,7 @@ def fp_vs_fn():
     plt.show()
 
 #multiple_pareto()
-fp_vs_fn()
+#fp_vs_fn()
 
 
 

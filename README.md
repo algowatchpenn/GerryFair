@@ -10,6 +10,17 @@ This repository contains python code for:
 * visualizing tradeoffs between error and fairness metrics
 * fairness sensitive datasets for experiments (as used in https://arxiv.org/abs/1808.08166)
 
+Fairness metrics supported for learning and auditing:
+* False Positive Rate equality
+* False Negative Rate equality
+
+Learner classes supported:
+* Any sklearn binary classifier (defaults to LinearRegression)
+
+Group classes supported:
+* Linear threshold functions over protected attributes
+
+
 ### Prerequisites
 
 To install the package and prepare for use, run:
@@ -22,7 +33,7 @@ If you already have these installed, you can forgo the requirements step.
 
 ## Using our package
 
-For demonstration of the GerryFair API, please see our [jupyter notebook](./GerryFair&#32;Demo.ipynb)
+For demonstration of the GerryFair API, please see our [jupyter notebook](./GerryFair&#32;Demo.ipynb). Other examples of usage are provided as scripts in the `examples` folder. These should be run from a location which contains the `gerryfair` folder.
 
 ## Datasets
 #### communities: http://archive.ics.uci.edu/ml/datasets/communities+and+crime
