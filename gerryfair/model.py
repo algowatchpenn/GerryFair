@@ -8,6 +8,7 @@ from gerryfair.auditor import Auditor
 from gerryfair.classifier_history import ClassifierHistory
 from gerryfair.reg_oracle_class import RegOracle
 import matplotlib
+import random
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -100,7 +101,7 @@ class Model:
                 vmax = minmax[1]
         return vmin, vmax
 
-    def predict(self, X):
+    def predict(self, X, sample=False):
         ''' Generates predictions. We do not yet advise using this in sensitive real-world settings. '''
 
         num_classifiers = len(self.classifiers)
@@ -111,7 +112,10 @@ class Model:
                 y_hat = new_preds
             else:
                 y_hat = np.add(y_hat, new_preds)
-        return [1 if y > .5 else 0 for y in y_hat]
+        if sample:
+            return [1 if y < random.random() else 0 for y in y_hat]
+        else:
+            return [y for y in y_hat]
 
     def pareto(self, X, X_prime, y, gamma_list):
         '''Assumes Model has FP specified for metric. 
