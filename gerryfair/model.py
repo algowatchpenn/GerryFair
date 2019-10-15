@@ -102,7 +102,10 @@ class Model:
         return vmin, vmax
 
     def predict(self, X, sample=False):
-        ''' Generates predictions. We do not yet advise using this in sensitive real-world settings. '''
+        '''
+        Outputs probabilities of positive classification, given randomness over the classifier history. 
+        To output 0-1 labels while maintaining the fairness guarantee (implicitly sampling a classifier for each point), set 'sample'=True.
+        '''
 
         num_classifiers = len(self.classifiers)
         y_hat = None
