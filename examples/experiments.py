@@ -29,8 +29,8 @@ def multiple_pareto():
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
     fair_model.set_options(max_iters=max_iters)
-    communities_all_errors, communities_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
+    communities_all_errors, communities_all_fp_violations, communities_all_fn_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
     
     # Train Set (Law School)
     X, X_prime, y = gerryfair.clean.clean_dataset(lawschool_dataset, lawschool_attributes, centered)
@@ -42,7 +42,7 @@ def multiple_pareto():
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
     fair_model.set_options(max_iters=max_iters)
-    lawschool_all_errors, lawschool_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
+    lawschool_all_errors, lawschool_all_fp_violations, lawschool_all_fn_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
 
     # Train Set (Adult Income)
@@ -55,7 +55,7 @@ def multiple_pareto():
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
     fair_model.set_options(max_iters=max_iters)
-    adult_all_errors, adult_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
+    adult_all_errors, adult_all_fp_violations, adult_all_fn_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
     # Train Set (Adult Income)
     X, X_prime, y = gerryfair.clean.clean_dataset(student_dataset, student_attributes, centered)
@@ -67,12 +67,12 @@ def multiple_pareto():
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
     fair_model.set_options(max_iters=max_iters)
-    student_all_errors, student_all_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
+    student_all_errors, student_all_fp_violations, student_all_fn_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
-    plt.plot(communities_all_errors, communities_all_violations, label='communities')
-    plt.plot(lawschool_all_errors, lawschool_all_violations, label='law school')
-    plt.plot(adult_all_errors, adult_all_violations, label='adult')
-    plt.plot(student_all_errors, student_all_violations, label='student')
+    plt.plot(communities_all_errors, communities_all_fp_violations, label='communities')
+    plt.plot(lawschool_all_errors, lawschool_all_fp_violations, label='law school')
+    plt.plot(adult_all_errors, adult_all_fp_violations, label='adult')
+    plt.plot(student_all_errors, student_all_fp_violations, label='student')
     plt.xlabel('error')
     plt.ylabel('unfairness')
     plt.legend()
@@ -117,12 +117,12 @@ def fp_vs_fn():
         predictions_inv = [abs(1-p) for p in predictions]
         _, fp_diff = fp_auditor.audit(predictions)
         _, fn_diff = fn_auditor.audit(predictions_inv)
-        fp_violations.append(fp_diff)
-        fn_violations.append(fn_diff)
+        comm_fp_violations.append(fp_diff)
+        comm_fn_violations.append(fn_diff)
 
-    print((fp_violations, fn_violations))
+    print((comm_fp_violations, comm_fn_violations))
 
-    plt.plot(fp_violations, fn_violations, label='communities')
+    plt.plot(comm_fp_violations, comm_fn_violations, label='communities')
     plt.xlabel('False Positive Disparity')
     plt.ylabel('False Negative Disparity')
     plt.legend()

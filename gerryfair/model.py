@@ -142,7 +142,7 @@ class Model:
             errors, fairness_violations = self.train(X, X_prime, y)
             predictions = self.predict(X)
             _, fn_violation = auditor.audit(predictions)
-            all_errors.append(errors_gt[-1])
+            all_errors.append(errors[-1])
             all_fp_violations.append(fairness_violations[-1])
             all_fn_violations.append(fn_violation)
 
