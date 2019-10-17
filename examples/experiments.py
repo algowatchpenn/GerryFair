@@ -42,7 +42,7 @@ def multiple_pareto():
     X_prime_train = X_prime.iloc[:train_size]
     y_train = y.iloc[:train_size]
     fair_model.set_options(max_iters=max_iters)
-    lawschool_all_errors, lawschool_all_fp_violations, lawschoool_all_fn_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
+    lawschool_all_errors, lawschool_all_fp_violations, lawschool_all_fn_violations = fair_model.pareto(X_train, X_prime_train, y_train, gamma_list)
 
 
     # Train Set (Adult Income)
